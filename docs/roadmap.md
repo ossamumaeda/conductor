@@ -1,0 +1,74 @@
+# Roadmap
+
+Cada fase termina com algo **funcionando de ponta a ponta**. Só avançar quando o critério de pronto da fase estiver ok.
+
+## Pré-requisitos
+- [x] Node.js (v22 via nvm)
+- [x] Claude Code instalado e logado
+- [ ] Ferramentas de build para o `node-pty` (módulo nativo): `python3`, `make`, `g++` (`sudo apt install build-essential python3`)
+
+---
+
+## Fase 0 — Validação técnica ✅
+Confirmar as hipóteses de `fontes-de-dados.md` antes de construir em cima delas. Scripts e capturas em `spikes/fase-0/`.
+
+- [x] Script de status line que só despeja o JSON recebido em um arquivo. Rodar uma sessão com `--settings` e registrar o payload real em `fontes-de-dados.md`
+- [x] Confirmar os valores possíveis de `status` em `sessions/<pid>.json`: existe também **`waiting`** (pedido de permissão)
+- [x] Confirmar que `--session-id` + `--name` + `--settings` funcionam juntos numa sessão interativa
+- [x] Compilar o `node-pty` para o Electron sem erro (Electron 45.2.1 + node-pty 1.1.0)
+- [x] Capturar o payload real do hook `Notification`: dispara 6 s depois do pedido, então foi substituído pelo `status: waiting` (D-012 revisada)
+
+**Resultado:** todas as hipóteses confirmadas. Mudanças: D-012 não usa mais hook, e o terceiro card do rodapé virou o resumo dos terminais (D-006).
+
+## Fase 1 — Esqueleto ✅
+- [x] Projeto `electron-vite` em TypeScript (main, preload, renderer), com os scripts `dev`, `build` e `typecheck`
+- [x] Tipos do contrato IPC em `src/shared/ipc.ts`
+- [x] Janela com o layout do mockup portado para `src/renderer/` (ainda com dados falsos)
+- [x] Preload com `contextBridge` e configurações de segurança (D-008)
+
+**Pronto quando:** `npm run dev` abre a janela com o visual idêntico ao mockup.
+
+**Resultado:** visual conferido lado a lado com o mockup em 1400×880. Já aplicados: a cor "precisa de você" (D-012), o rodapé novo (D-006), a tag "em uso" (D-010) e a dica `Ctrl+Tab` (D-007). A ponte segura já funciona de ponta a ponta: o topo da sidebar mostra a versão real do `claude`.
+
+## Fase 2 — Um terminal real
+- [ ] `pty-manager` fazendo spawn do `claude` em um diretório fixo
+- [ ] xterm.js no painel direito, com os addons fit e webgl e as fontes do mockup
+- [ ] Redimensionamento correto ao mudar o tamanho da janela
+- [ ] Copiar/colar funcionando
+
+**Pronto quando:** dá para conversar com o Claude dentro do app como na TUI normal, inclusive aprovando permissões.
+
+## Fase 3 — Vários terminais
+- [ ] Botão "+": escolher diretório e nome, depois spawn com `--session-id`, `--name` e `--settings`
+- [ ] Lista de terminais ativos ligada ao `pty-manager`
+- [ ] Troca de terminal preservando o estado (instâncias escondidas, não destruídas)
+- [ ] Fechar com o diálogo de confirmação, matando o processo
+- [ ] Atalhos `Ctrl+Tab` / `Ctrl+Shift+Tab`, `Ctrl+Shift+T` e `Ctrl+Shift+W` (D-007)
+- [ ] Ao fechar o app: confirmar se houver terminal executando e encerrar todos (D-011)
+- [ ] Tratar o caso em que o processo sai sozinho (`/exit`, crash)
+
+**Pronto quando:** 4 sessões rodam em paralelo e a troca entre elas é instantânea.
+
+## Fase 4 — Histórico
+- [ ] `history.ts` varrendo `~/.claude/projects/` com cache por `mtime`
+- [ ] Título (`aiTitle`/nome), diretório e data relativa ("Hoje, 10:42")
+- [ ] Clique → `--resume` no `cwd` original, abrindo como terminal ativo
+- [ ] Busca por título e diretório
+- [ ] Tag "em uso" e retomada bloqueada para sessões abertas fora do app (D-010)
+- [ ] Atualização automática quando uma sessão é fechada
+
+**Pronto quando:** qualquer sessão antiga é retomada em um clique.
+
+## Fase 5 — Status, contexto e uso
+- [ ] `sessions.ts` com a bolinha executando / aguardando / precisa de você em tempo real (D-012)
+- [ ] `statusline.cjs` + `usage.ts` alimentando o rodapé (Sessão 5h e Semanal, com reset; terceiro card com o resumo dos terminais, D-006)
+- [ ] Barra de contexto por terminal e ordenação por uso
+- [ ] Barra inferior do painel (contexto · modelo · branch)
+
+**Pronto quando:** os números batem com o `/usage` e o `/context` da TUI.
+
+## Fase 6 — Polimento
+- [ ] Empacotar em AppImage/.deb e criar o atalho `.desktop` no menu
+- [ ] Ícone do app
+
+**Pronto quando:** o app substitui o uso diário da TUI pura.

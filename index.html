@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b0e12" />
+  <title>Conductor — Terminal workspace</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap');
+    :root { color-scheme: dark; --bg:#0b0e12; --panel:#11151b; --panel2:#151a21; --line:#252c35; --muted:#89929f; --text:#e8ebef; --green:#9ce5a3; --amber:#f3c779; --mono:'DM Mono',monospace; --sans:'DM Sans',sans-serif; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-width:320px; height:100vh; overflow:hidden; background:var(--bg); color:var(--text); font-family:var(--sans); }
+    button { color:inherit; font:inherit; }
+    .app { display:grid; grid-template-columns:minmax(330px,30%) minmax(0,1fr); grid-template-rows:minmax(0,1fr) 76px; height:100vh; }
+    .sidebar { display:flex; min-height:0; flex-direction:column; background:#0f1318; border-right:1px solid var(--line); }
+    .brand { height:62px; flex:none; display:flex; align-items:center; justify-content:space-between; padding:0 20px; border-bottom:1px solid var(--line); }
+    .brand-mark { display:flex; gap:10px; align-items:center; font-weight:700; letter-spacing:-.03em; font-size:16px; }
+    .logo { width:25px;height:25px; display:grid; place-items:center; border-radius:7px; color:#0b0e12; background:var(--green); font:500 15px var(--mono); }
+    .brand small { color:var(--muted); font:11px var(--mono); letter-spacing:.04em; }
+    .section { display:flex; min-height:0; flex-direction:column; }
+    .active-section { flex:1.02; border-bottom:1px solid var(--line); }
+    .history-section { flex:.98; }
+    .section-head { display:flex; align-items:center; justify-content:space-between; padding:18px 20px 12px; }
+    .section-title { display:flex; align-items:center; gap:9px; margin:0; color:#d6dbe1; font-size:12px; text-transform:uppercase; letter-spacing:.1em; font-weight:700; }
+    .count { display:grid; place-items:center; height:19px; min-width:19px; padding:0 5px; border:1px solid #303944; border-radius:5px; color:#aeb7c2; font:10px var(--mono); }
+    .text-button { padding:4px; border:0; background:transparent; color:var(--muted); font-size:11px; cursor:pointer; }
+    .text-button:hover { color:var(--text); }
+    .table-wrap { min-height:0; overflow:auto; scrollbar-width:thin; scrollbar-color:#303944 transparent; }
+    table { width:100%; border-collapse:collapse; text-align:left; }
+    th { position:sticky; top:0; z-index:1; padding:8px 20px; background:#0f1318; color:#737e8b; font-size:10px; font-weight:600; letter-spacing:.09em; text-transform:uppercase; }
+    td { padding:12px 20px; border-top:1px solid #1e242c; font-size:12px; }
+    .active-table tbody tr { cursor:pointer; transition:background .15s; }
+    .active-table tbody tr:hover { background:#171d24; }
+    .active-table tbody tr.selected { background:#19211f; box-shadow:inset 2px 0 var(--green); }
+    .active-name-cell { display:flex; align-items:center; gap:6px; }
+    .terminal-row-actions { position:relative; flex:none; }
+    .terminal-name { display:flex; align-items:center; gap:9px; color:#e2e6eb; font-weight:600; white-space:nowrap; }
+    .active-table td { padding-top:9px; padding-bottom:9px; }
+    .terminal-label { display:flex; min-width:0; flex-direction:column; gap:3px; }
+    .terminal-directory { max-width:180px; overflow:hidden; color:#7e8995; font:10px var(--mono); text-overflow:ellipsis; white-space:nowrap; }
+    .row-menu-trigger { width:25px; height:25px; display:grid; place-items:center; border:1px solid transparent; border-radius:5px; background:transparent; color:#87919d; font:500 16px var(--mono); letter-spacing:1px; line-height:1; cursor:pointer; opacity:1; }
+    .row-menu-trigger:focus-visible, .row-menu-trigger[aria-expanded="true"] { opacity:1; }
+    .row-menu-trigger:hover, .row-menu-trigger[aria-expanded="true"] { border-color:#37414c; background:#20262e; color:#e3e8ed; }
+    .row-menu { position:absolute; z-index:5; top:28px; right:0; display:none; width:160px; padding:4px; border:1px solid #333d48; border-radius:7px; background:#1a2027; box-shadow:0 10px 25px #0008; }
+    .row-menu.open { display:block; }
+    .row-menu button { width:100%; padding:8px 9px; border:0; border-radius:4px; background:transparent; color:#ed9999; text-align:left; font-size:11px; cursor:pointer; }
+    .row-menu button:hover { background:#302124; color:#ffb0b0; }
+    .status-dot { width:7px; height:7px; flex:none; border-radius:50%; background:#78d48c; box-shadow:0 0 9px #78d48655; }
+    .status-dot.idle { background:#e6bb68; box-shadow:0 0 8px #e6bb6855; }
+    .token-cell { min-width:118px; }
+    .active-actions-cell { width:42px; padding-right:14px; padding-left:4px; text-align:center; }
+    .active-actions-cell .terminal-row-actions { display:inline-block; }
+    .token-meta { display:flex; justify-content:space-between; gap:8px; margin-bottom:6px; color:#aeb7c2; font:10px var(--mono); }
+    .token-meta strong { color:#dfe4e9; font-weight:500; }
+    .meter { height:3px; overflow:hidden; border-radius:9px; background:#29313a; }
+    .meter i { display:block; height:100%; border-radius:9px; background:#88d995; }
+    .meter i.warn { background:#e7b965; }
+    .history-table td { color:#afb7c1; font:10px var(--mono); white-space:nowrap; }
+    .history-table td:first-child { color:#d7dce2; font:500 11px var(--sans); }
+    .history-table td:nth-child(2) { max-width:160px; overflow:hidden; text-overflow:ellipsis; }
+    .history-table tbody tr:hover { background:#151a21; }
+    .history-table tr { cursor:pointer; }
+    .history-topline { color:#65707d; font:10px var(--mono); }
+    .terminal-area { display:flex; min-width:0; flex-direction:column; background:#0b0e12; }
+    .topbar { height:62px; flex:none; display:flex; align-items:center; justify-content:space-between; padding:0 24px; border-bottom:1px solid var(--line); background:#0f1318; }
+    .crumb { display:flex; align-items:center; gap:10px; min-width:0; color:#a0a9b4; font-size:12px; }
+    .crumb strong { overflow:hidden; color:#eef1f4; font-weight:600; text-overflow:ellipsis; white-space:nowrap; }
+    .slash { color:#48515c; }
+    .live { display:flex; align-items:center; gap:7px; color:#96d69b; font:10px var(--mono); letter-spacing:.06em; text-transform:uppercase; }
+    .live .status-dot { width:6px;height:6px; }
+    .actions { display:flex; align-items:center; gap:8px; }
+    .icon-btn { width:31px;height:31px; display:grid; place-items:center; border:1px solid #2a323c; border-radius:7px; background:#161b22; color:#aab3bd; cursor:pointer; }
+    .icon-btn:hover { color:#fff; border-color:#46515d; }
+    .icon-btn svg { width:14px;height:14px; }
+    .term-subbar { display:flex; align-items:center; justify-content:space-between; padding:11px 24px; border-bottom:1px solid #1b2027; color:#89939f; font:10px var(--mono); }
+    .term-subbar .path { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .keyhint { flex:none; margin-left:16px; }
+    .key { padding:2px 5px; border:1px solid #303842; border-radius:4px; color:#abb4be; }
+    .terminal { position:relative; flex:1; min-height:0; overflow:auto; padding:28px 32px 48px; color:#d0d6dd; font:12px/1.85 var(--mono); }
+    .terminal-content { max-width:880px; }
+    .welcome { margin:0 0 22px; color:#777f8a; }
+    .prompt { color:#91d99b; }
+    .command { color:#e9edf1; }
+    .output { margin:5px 0 19px; color:#aeb6c0; }
+    .output .highlight { color:#d8e4d8; }
+    .output .muted { color:#73808b; }
+    .output .success { color:#8bd497; }
+    .output .warning { color:#e8c278; }
+    .codebox { margin:9px 0 18px; padding:10px 14px; border:1px solid #252d36; border-radius:6px; background:#10151a; color:#b9c3ce; white-space:pre-wrap; }
+    .cursorline { display:flex; align-items:center; gap:7px; margin-top:4px; }
+    .cursor { width:7px;height:15px; background:#a6e2a9; animation:blink 1.1s steps(2,start) infinite; }
+    @keyframes blink { to { visibility:hidden; } }
+    .bottom-status { height:30px; flex:none; display:flex; justify-content:space-between; align-items:center; padding:0 16px; border-top:1px solid #222831; color:#737e89; background:#10141a; font:10px var(--mono); }
+    .bottom-status span { display:flex; align-items:center; gap:7px; }
+    .bottom-status .status-dot { width:6px;height:6px; }
+    .usage-footer { grid-column:1 / -1; display:grid; grid-template-columns:1.15fr 1fr 1fr 1fr; align-items:center; gap:0; border-top:1px solid var(--line); background:#10141a; }
+    .usage-heading { padding:0 22px; color:#d6dce2; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
+    .usage-card { min-width:0; padding:0 20px; border-left:1px solid #252c35; }
+    .usage-card-top { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:7px; }
+    .usage-label { color:#8e98a4; font-size:10px; }
+    .usage-percent { color:#e0e6eb; font:11px var(--mono); }
+    .usage-card .meter { height:3px; margin-bottom:6px; }
+    .usage-reset { overflow:hidden; color:#66717e; font:9px var(--mono); text-overflow:ellipsis; white-space:nowrap; }
+    .empty-terminal { max-width:500px; margin:15vh auto 0; color:#8d98a4; text-align:center; }
+    .empty-terminal strong { display:block; margin-bottom:8px; color:#e0e5ea; font:500 15px var(--sans); }
+    .empty-terminal p { font:12px/1.7 var(--sans); }
+    .confirm-dialog { width:min(400px,calc(100vw - 32px)); padding:22px; border:1px solid #303944; border-radius:10px; background:#151a21; color:var(--text); box-shadow:0 24px 80px #0009; }
+    .confirm-dialog::backdrop { background:#05070ab8; backdrop-filter:blur(2px); }
+    .confirm-dialog h2 { margin:0 0 9px; font-size:15px; }
+    .confirm-dialog p { margin:0; color:#9ba5b1; font-size:12px; line-height:1.6; }
+    .dialog-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:22px; }
+    .dialog-button { padding:8px 12px; border:1px solid #353e49; border-radius:6px; background:#1a2028; color:#dce2e8; font-size:11px; cursor:pointer; }
+    .dialog-button.danger { border-color:#944d50; background:#8b3c40; color:#fff; }
+    .dialog-button:hover { filter:brightness(1.14); }
+    @media(max-width:850px) { .app { grid-template-columns:minmax(290px,38%) minmax(0,1fr); grid-template-rows:minmax(0,1fr) 76px; } .topbar { padding:0 16px; } .terminal { padding:22px 18px; } .usage-heading { padding:0 14px; } .usage-card { padding:0 12px; } }
+    @media(max-width:620px) { body { overflow:auto; } .app { height:auto; min-height:100vh; grid-template-columns:1fr; grid-template-rows:55vh minmax(55vh,1fr) auto; } .terminal-area { grid-column:1; grid-row:1; } .sidebar { grid-column:1; grid-row:2; border-top:1px solid var(--line); border-right:0; min-height:510px; } .active-section { min-height:260px; } .history-section { min-height:250px; } .brand { display:none; } .topbar { height:52px; } .term-subbar { padding:9px 16px; } .terminal { font-size:11px; } .usage-footer { grid-column:1; grid-row:3; grid-template-columns:1fr 1fr; padding:10px 0; } .usage-heading { grid-column:1 / -1; padding:0 14px 8px; } .usage-card { padding:5px 14px; } .usage-card:nth-child(2) { border-left:0; } .row-menu-trigger { opacity:1; } }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <aside class="sidebar" aria-label="Painel de terminais">
+      <header class="brand"><div class="brand-mark"><span class="logo">⌘</span> conductor</div><small>WORKSPACE / LOCAL</small></header>
+      <section class="section active-section">
+        <div class="section-head"><h2 class="section-title">Terminais ativos <span class="count" id="active-count">04</span></h2><button class="text-button" id="sort-button">USO ↓</button></div>
+        <div class="table-wrap"><table class="active-table"><thead><tr><th>Terminal / diretório</th><th>Uso de tokens</th><th>Ações</th></tr></thead><tbody id="active-rows"></tbody></table></div>
+      </section>
+      <section class="section history-section">
+        <div class="section-head"><h2 class="section-title">Histórico <span class="count" id="history-count">08</span></h2><span class="history-topline">RECENTES</span></div>
+        <div class="table-wrap"><table class="history-table"><thead><tr><th>Terminal</th><th>Diretório</th><th>Data</th></tr></thead><tbody id="history-rows"></tbody></table></div>
+      </section>
+    </aside>
+    <section class="terminal-area" aria-label="Terminal selecionado">
+      <header class="topbar"><div class="crumb"><span>Terminais</span><span class="slash">/</span><strong id="terminal-title">api-refactor</strong><span class="live"><i class="status-dot"></i> ativo</span></div><div class="actions"><button class="icon-btn" title="Nova janela" aria-label="Nova janela"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14"/></svg></button><button class="icon-btn" title="Mais opções" aria-label="Mais opções"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></button></div></header>
+      <div class="term-subbar"><span class="path" id="terminal-path">~/projects/acme/api</span><span class="keyhint"><span class="key">⌘</span> <span class="key">K</span> alternar terminal</span></div>
+      <div class="terminal"><div class="terminal-content" id="terminal-content"></div></div>
+      <footer class="bottom-status"><span><i class="status-dot"></i> claude code <span style="color:#46515d">·</span> sessão em execução</span><span id="token-status">contexto 68% <span style="color:#46515d">·</span> sonnet 4</span></footer>
+    </section>
+    <footer class="usage-footer" aria-label="Resumo de uso de tokens">
+      <div class="usage-heading">Uso de tokens <span style="color:#66717e;font:10px var(--mono);font-weight:400">· Claude</span></div>
+      <div class="usage-card"><div class="usage-card-top"><span class="usage-label">Uso total</span><span class="usage-percent">68%</span></div><div class="meter"><i style="width:68%"></i></div><div class="usage-reset">Zera hoje às 16:30</div></div>
+      <div class="usage-card"><div class="usage-card-top"><span class="usage-label">Uso semanal</span><span class="usage-percent">34%</span></div><div class="meter"><i style="width:34%"></i></div><div class="usage-reset">Zera 03 nov, às 11:00</div></div>
+      <div class="usage-card"><div class="usage-card-top"><span class="usage-label">Uso mensal</span><span class="usage-percent">58%</span></div><div class="meter"><i class="warn" style="width:58%"></i></div><div class="usage-reset">Zera 01 dez, às 00:00</div></div>
+    </footer>
+  </main>
+  <dialog class="confirm-dialog" id="close-dialog" aria-labelledby="close-dialog-title">
+    <form method="dialog" id="close-form">
+      <h2 id="close-dialog-title">Fechar terminal?</h2>
+      <p id="close-dialog-message">A sessão será encerrada e movida para o histórico.</p>
+      <div class="dialog-actions"><button class="dialog-button" value="cancel">Cancelar</button><button class="dialog-button danger" value="confirm">Fechar terminal</button></div>
+    </form>
+  </dialog>
+  <script>
+    const terminals = [
+      { name:'api-refactor', percent:68, tokens:'136k / 200k', path:'~/projects/acme/api', branch:'feat/streaming-api', model:'sonnet 4', activity:'executando', lines:[
+        ['prompt','gabriel@macbook'],['command','claude'],['output','<span class="muted">✻ Claude Code v1.0.72</span>'],['output',''],['prompt','❯'],['command','  Revise a implementação de streaming no endpoint /v2/completions.'],['output',''],['output','<span class="highlight">⏺ Vou analisar o endpoint e os testes relacionados.</span>'],['output',''],['output','  <span class="muted">Lendo src/routes/completions.ts…</span>'],['output','  <span class="muted">Lendo src/services/stream.ts…</span>'],['output','  <span class="muted">Buscando testes de streaming…</span>'],['output',''],['output','<span class="highlight">⏺ Encontrei dois pontos para corrigir:</span>'],['output',''],['output','  1. O stream não fecha quando o cliente cancela a requisição.'],['output','  2. Erros do provider não são propagados ao consumidor.'],['output',''],['output','<span class="success">⏺ Atualizei o controller e adicionei tratamento de cancelamento.</span>'],['output',''],['output','  src/routes/completions.ts'],['output','  <span class="success">+ signal: request.signal,</span>'],['output','  <span class="success">+ onError: (error) =&gt; logger.error({ error }, "stream failed"),</span>'],['output',''],['output','<span class="muted">⠋ Executando testes de integração…</span>']] },
+      { name:'dashboard-ui', percent:42, tokens:'84k / 200k', path:'~/projects/acme/dashboard', branch:'feat/usage-overview', model:'sonnet 4', activity:'aguardando', lines:[['prompt','gabriel@macbook'],['command','claude'],['output','<span class="muted">✻ Claude Code v1.0.72</span>'],['output',''],['prompt','❯'],['command','  Ajuste a hierarquia visual do painel de uso.'],['output',''],['output','<span class="highlight">⏺ Vou verificar os componentes e tokens de estilo.</span>'],['output',''],['output','  <span class="muted">Lendo src/components/UsageOverview.tsx…</span>'],['output','  <span class="muted">Lendo src/styles/tokens.css…</span>'],['output',''],['output','<span class="success">⏺ Reduzi a densidade da grade e dei mais destaque às métricas principais.</span>'],['output',''],['output','  <span class="muted">3 arquivos modificados · alterações ainda não commitadas</span>'],['output',''],['prompt','❯']] },
+      { name:'auth-migration', percent:91, tokens:'182k / 200k', path:'~/projects/acme/auth', branch:'chore/oauth-migration', model:'sonnet 4', activity:'executando', lines:[['prompt','gabriel@macbook'],['command','claude'],['output','<span class="muted">✻ Claude Code v1.0.72</span>'],['output',''],['prompt','❯'],['command','  Migre o callback OAuth para usar PKCE.'],['output',''],['output','<span class="highlight">⏺ Vou rastrear o fluxo atual antes de alterar os handlers.</span>'],['output',''],['output','  <span class="muted">Lendo src/auth/oauth.ts…</span>'],['output','  <span class="muted">Lendo src/auth/callback.ts…</span>'],['output',''],['output','<span class="warning">⚠ Contexto próximo do limite recomendado.</span>'],['output','  <span class="muted">Considere iniciar uma nova sessão após esta alteração.</span>'],['output',''],['output','⏺ Atualizando geração do code_verifier e validação do code_challenge…']] },
+      { name:'docs-search', percent:17, tokens:'34k / 200k', path:'~/projects/acme/docs', branch:'docs/search-index', model:'sonnet 4', activity:'aguardando', lines:[['prompt','gabriel@macbook'],['command','claude'],['output','<span class="muted">✻ Claude Code v1.0.72</span>'],['output',''],['prompt','❯'],['command','  Encontre a origem dos exemplos de busca na documentação.'],['output',''],['output','<span class="highlight">⏺ Vou localizar os exemplos e rastrear como são gerados.</span>'],['output',''],['output','  <span class="muted">Busca concluída · 12 arquivos relevantes</span>'],['output',''],['output','<span class="success">⏺ Os snippets vêm de docs/examples/search/ e são sincronizados no build.</span>'],['output',''],['prompt','❯']] }
+    ];
+    const history = [
+      ['landing-page','~/projects/acme/web','Hoje, 10:42'],['db-indexes','~/projects/acme/api','Hoje, 09:18'],['email-templates','~/projects/acme/mail','Ontem, 17:36'],['bugfix-session','~/projects/acme/api','Ontem, 15:02'],['component-tests','~/projects/acme/web','Ontem, 11:24'],['cli-commands','~/projects/acme/tools','28 out, 16:50'],['readme-refresh','~/projects/acme/docs','28 out, 14:12'],['auth-spike','~/projects/acme/auth','27 out, 18:07']
+    ];
+    let selected = 0, descending = true, pendingClose = null;
+    const activeRows = document.querySelector('#active-rows');
+    const closeDialog = document.querySelector('#close-dialog');
+    function renderHistory() {
+      document.querySelector('#history-count').textContent=String(history.length).padStart(2,'0');
+      document.querySelector('#history-rows').innerHTML=history.map(row=>`<tr title="${row[0]} · ${row[1]}"><td>${row[0]}</td><td>${row[1]}</td><td>${row[2]}</td></tr>`).join('');
+    }
+    function renderActive() {
+      const ordered = terminals.map((t,i)=>({...t,i})).sort((a,b)=>descending?b.percent-a.percent:a.percent-b.percent);
+      activeRows.innerHTML = ordered.map(t=>`<tr data-index="${t.i}" class="${selected===t.i?'selected':''}" aria-selected="${selected===t.i}"><td><div class="active-name-cell"><span class="terminal-name"><i class="status-dot ${t.activity==='aguardando'?'idle':''}"></i><span class="terminal-label"><span>${t.name}</span><span class="terminal-directory" title="${t.path}">${t.path}</span></span></span></div></td><td class="token-cell"><div class="token-meta"><strong>${t.percent}%</strong><span>${t.tokens}</span></div><div class="meter"><i class="${t.percent>85?'warn':''}" style="width:${t.percent}%"></i></div></td><td class="active-actions-cell"><span class="terminal-row-actions"><button class="row-menu-trigger" type="button" title="Opções de ${t.name}" aria-label="Opções de ${t.name}" aria-expanded="false" data-menu-index="${t.i}">⋯</button><span class="row-menu" role="menu"><button type="button" role="menuitem" data-close-index="${t.i}">Fechar terminal</button></span></span></td></tr>`).join('');
+      activeRows.querySelectorAll('tr').forEach(row=>row.addEventListener('click',()=>selectTerminal(Number(row.dataset.index))));
+      activeRows.querySelectorAll('.row-menu-trigger').forEach(button=>button.addEventListener('click',event=>{
+        event.stopPropagation();
+        const menu=button.nextElementSibling;
+        const wasOpen=menu.classList.contains('open');
+        closeRowMenus();
+        if(!wasOpen) { menu.classList.add('open'); button.setAttribute('aria-expanded','true'); }
+      }));
+      activeRows.querySelectorAll('.row-menu [data-close-index]').forEach(button=>button.addEventListener('click',event=>{
+        event.stopPropagation(); const index=Number(button.dataset.closeIndex); closeRowMenus(); requestClose(index);
+      }));
+      document.querySelector('#active-count').textContent=String(terminals.length).padStart(2,'0');
+    }
+    function closeRowMenus() {
+      activeRows.querySelectorAll('.row-menu.open').forEach(menu=>menu.classList.remove('open'));
+      activeRows.querySelectorAll('.row-menu-trigger[aria-expanded="true"]').forEach(button=>button.setAttribute('aria-expanded','false'));
+    }
+    function requestClose(index) {
+      pendingClose=terminals[index];
+      document.querySelector('#close-dialog-message').textContent=`A sessão “${pendingClose.name}” será encerrada e movida para o histórico.`;
+      closeDialog.showModal();
+    }
+    closeDialog.addEventListener('close',()=>{
+      if(closeDialog.returnValue!=='confirm'||!pendingClose) { pendingClose=null; return; }
+      const index=terminals.indexOf(pendingClose);
+      if(index<0) { pendingClose=null; return; }
+      const [closed]=terminals.splice(index,1);
+      const now=new Date();
+      const dateLabel=`Hoje, ${new Intl.DateTimeFormat('pt-BR',{hour:'2-digit',minute:'2-digit'}).format(now)}`;
+      history.unshift([closed.name,closed.path,dateLabel]);
+      renderHistory();
+      if(terminals.length===0) {
+        selected=-1;
+        renderActive();
+        document.querySelector('#terminal-title').textContent='Nenhum terminal ativo';
+        document.querySelector('#terminal-path').textContent='';
+        document.querySelector('#token-status').textContent='';
+        document.querySelector('.live').style.display='none';
+        document.querySelector('#terminal-content').innerHTML='<div class="empty-terminal"><strong>Nenhum terminal ativo</strong><p>Todos os terminais foram encerrados. Os encerrados aparecem no histórico.</p></div>';
+      } else if(selected===index) {
+        selected=Math.min(index,terminals.length-1);
+        selectTerminal(selected);
+      } else {
+        if(selected>index) selected--;
+        renderActive();
+      }
+      pendingClose=null;
+    });
+    function selectTerminal(index) {
+      selected=index; const t=terminals[index];
+      document.querySelector('.live').style.display='flex';
+      document.querySelector('#terminal-title').textContent=t.name;
+      document.querySelector('#terminal-path').textContent=t.path;
+      document.querySelector('#token-status').innerHTML=`contexto ${t.percent}% <span style="color:#46515d">·</span> ${t.model}`;
+      document.querySelector('.live').innerHTML=`<i class="status-dot ${t.activity==='aguardando'?'idle':''}"></i> ${t.activity==='aguardando'?'aguardando':'ativo'}`;
+      document.querySelector('#terminal-content').innerHTML=`<p class="welcome">Conectado a ${t.path} <span class="muted">·</span> branch <span class="success">${t.branch}</span></p>`+t.lines.map(([kind,line])=>kind==='prompt'?`<div class="cursorline"><span class="prompt">${line}</span>${line==='❯'?'<i class="cursor"></i>':''}</div>`:kind==='command'?`<div class="command">${line}</div>`:`<div class="output">${line||'&nbsp;'}</div>`).join('');
+      renderActive();
+    }
+    document.querySelector('#sort-button').addEventListener('click',()=>{descending=!descending;document.querySelector('#sort-button').textContent=descending?'USO ↓':'USO ↑';renderActive()});
+    document.addEventListener('click',event=>{if(!event.target.closest('.terminal-row-actions')) closeRowMenus()});
+    document.addEventListener('keydown',event=>{if(event.key==='Escape') closeRowMenus()});
+    renderHistory();
+    renderActive(); selectTerminal(0);
+  </script>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:" />
+  <title>Conductor</title>
+</head>
+<body>
+  <main class="app">
+    <aside class="sidebar" aria-label="Painel de terminais">
+      <header class="brand">
+        <div class="brand-mark"><span class="logo">⌘</span> conductor</div>
+        <small id="app-info">—</small>
+      </header>
+
+      <section class="section active-section">
+        <div class="section-head">
+          <h2 class="section-title">Terminais ativos <span class="count" id="active-count">00</span></h2>
+          <button class="text-button" id="sort-button" type="button">USO ↓</button>
+        </div>
+        <div class="table-wrap">
+          <table class="active-table">
+            <thead><tr><th>Terminal / diretório</th><th>Contexto</th><th>Ações</th></tr></thead>
+            <tbody id="active-rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="section history-section">
+        <div class="section-head">
+          <h2 class="section-title">Histórico <span class="count" id="history-count">00</span></h2>
+          <span class="history-topline">RECENTES</span>
+        </div>
+        <div class="table-wrap">
+          <table class="history-table">
+            <thead><tr><th>Terminal</th><th>Diretório</th><th>Data</th></tr></thead>
+            <tbody id="history-rows"></tbody>
+          </table>
+        </div>
+      </section>
+    </aside>
+
+    <section class="terminal-area" aria-label="Terminal selecionado">
+      <header class="topbar">
+        <div class="crumb">
+          <span>Terminais</span><span class="slash">/</span>
+          <strong id="terminal-title">—</strong>
+          <span class="live" id="terminal-live"></span>
+        </div>
+        <div class="actions">
+          <button class="icon-btn" id="new-terminal" type="button" title="Novo terminal (Ctrl+Shift+T)" aria-label="Novo terminal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14"/></svg>
+          </button>
+        </div>
+      </header>
+      <div class="term-subbar">
+        <span class="path" id="terminal-path"></span>
+        <span class="keyhint"><span class="key">Ctrl</span> <span class="key">Tab</span> alternar terminal</span>
+      </div>
+      <div class="terminal"><div class="terminal-content" id="terminal-content"></div></div>
+      <footer class="bottom-status">
+        <span><i class="status-dot"></i> claude code <span class="sep">·</span> <span id="session-state">—</span></span>
+        <span id="token-status"></span>
+      </footer>
+    </section>
+
+    <footer class="usage-footer" aria-label="Uso do plano e resumo dos terminais">
+      <div class="usage-heading">Uso do plano <span class="usage-heading-sub">· Claude</span></div>
+      <div class="usage-card" id="usage-five-hour"></div>
+      <div class="usage-card" id="usage-seven-day"></div>
+      <div class="usage-card" id="terminal-summary"></div>
+    </footer>
+  </main>
+
+  <dialog class="confirm-dialog" id="close-dialog" aria-labelledby="close-dialog-title">
+    <form method="dialog">
+      <h2 id="close-dialog-title">Fechar terminal?</h2>
+      <p id="close-dialog-message">A sessão será encerrada e movida para o histórico.</p>
+      <div class="dialog-actions">
+        <button class="dialog-button" value="cancel">Cancelar</button>
+        <button class="dialog-button danger" value="confirm">Fechar terminal</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>
