@@ -56,6 +56,9 @@ Cada linha é um evento. O nome da pasta é o `cwd` com `/` trocado por `-`. Ess
 
 - **O arquivo só é criado quando a primeira mensagem é enviada.** Uma sessão aberta e fechada sem mensagens não aparece no histórico. Isso é esperado.
 - Campos usados: `type`, `sessionId`, `cwd`, `gitBranch`, `timestamp`, `customTitle`, `aiTitle` (pode repetir; vale o último), `isSidechain` (mensagens de subagentes; ignorar).
+- Títulos ficam em linhas próprias: `{"type":"custom-title","customTitle":…}` (de `--name`), `{"type":"ai-title","aiTitle":…}` (gerado; repete ao longo do arquivo) e `{"type":"last-prompt","lastPrompt":…}`.
+- Fora de um repositório git, `gitBranch` vem como `"HEAD"`; o app trata isso como "sem branch".
+- Linhas de API (`api-request-blob` etc.) chegam a centenas de KB: o app filtra por substring antes de fazer `JSON.parse`.
 
 ### Contexto sem status line (fallback para o histórico)
 Na última linha `assistant` com `isSidechain: false`, somar `input_tokens + cache_creation_input_tokens + cache_read_input_tokens` de `message.usage`.

@@ -10,6 +10,7 @@ import { IPC, type AppInfo, type TerminalCreateRequest, type TerminalCreateResul
 import { resolveClaudeBinary } from './claude-bin'
 import { buildClaudeArgs, isSessionId, resolveDirectory, sanitizeName } from './claude-launch'
 import { PtyManager } from './pty-manager'
+import { SessionHub } from './session-hub'
 
 const execFileAsync = promisify(execFile)
 const isDev = !app.isPackaged
@@ -20,7 +21,15 @@ let closeConfirmed = false
 
 const ptys = new PtyManager({
   data: (event) => mainWindow?.webContents.send(IPC.terminalData, event),
-  exit: (event) => mainWindow?.webContents.send(IPC.terminalExit, event)
+  exit: (event) => {
+    mainWindow?.webContents.send(IPC.terminalExit, event)
+    // A sessão fechada volta para o histórico (com a atividade mais recente).
+    void hub.refreshHistory()
+  }
+})
+
+const hub = new SessionHub(ptys, {
+  history: (items) => mainWindow?.webContents.send(IPC.historyUpdate, items)
 })
 
 async function readClaudeVersion(): Promise<string | null> {
@@ -70,12 +79,17 @@ function registerIpc(): void {
 
     const resume = request.resumeSessionId !== undefined
     if (resume && !isSessionId(request.resumeSessionId)) return { ok: false, error: 'ID de sessão inválido' }
+    if (resume && ptys.hasSession(request.resumeSessionId as string)) return { ok: false, error: 'Essa sessão já está aberta no app.' }
+    if (resume && hub.isRunningElsewhere(request.resumeSessionId as string)) {
+      return { ok: false, error: 'Essa sessão está aberta em outro terminal. Feche-a lá para retomar aqui.' }
+    }
     const sessionId = resume ? (request.resumeSessionId as string) : randomUUID()
     const name = sanitizeName(isStr(request.name) ? request.name : undefined, cwd)
     const args = buildClaudeArgs({ sessionId, resume, name, extra: extraClaudeArgs() })
 
     try {
-      const terminalId = ptys.create({ file, args, cwd, cols: request.cols, rows: request.rows })
+      const terminalId = ptys.create({ sessionId, file, args, cwd, cols: request.cols, rows: request.rows })
+      hub.publishHistory() // uma sessão retomada sai do histórico
       return { ok: true, terminalId, sessionId, cwd, name }
     } catch (error) {
       return { ok: false, error: `Falha ao iniciar o claude: ${(error as Error).message}` }
@@ -91,6 +105,8 @@ function registerIpc(): void {
   ipcMain.on(IPC.terminalKill, (event, terminalId: unknown) => {
     if (fromMainWindow(event) && isStr(terminalId)) ptys.kill(terminalId)
   })
+
+  ipcMain.handle(IPC.historyGet, (event) => (fromMainWindow(event) ? hub.history() : []))
 
   ipcMain.handle(IPC.dialogPickDirectory, async (event, defaultPath: unknown) => {
     if (!fromMainWindow(event) || !mainWindow) return null
@@ -199,7 +215,11 @@ app.whenReady().then(() => {
   session.defaultSession.setPermissionCheckHandler((_wc, permission) => ALLOWED_PERMISSIONS.has(permission))
   registerIpc()
   mainWindow = createWindow()
+  hub.start()
 })
 
-app.on('before-quit', () => ptys.killAll())
+app.on('before-quit', () => {
+  hub.stop()
+  ptys.killAll()
+})
 app.on('window-all-closed', () => app.quit())

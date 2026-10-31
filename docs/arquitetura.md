@@ -28,9 +28,9 @@ flowchart LR
 |---|---|
 | `index.ts` | Cria a janela, registra os canais IPC e faz o ciclo de vida do app |
 | `pty-manager.ts` | Cria, redimensiona, escreve e encerra os pseudo-terminais. Guarda o mapa `terminalId → { pty, sessionId, cwd, name }` |
-| `claude-data/sessions.ts` | Observa `~/.claude/sessions/` e emite o status (busy/idle/attention) de cada sessão |
 | `claude-data/history.ts` | Varre `~/.claude/projects/` e monta a lista do histórico (título, cwd, data, branch) |
-| `claude-data/context.ts` | Calcula o contexto usado de uma sessão a partir do `.jsonl` |
+| `claude-data/registry.ts` | Lê e observa `~/.claude/sessions/` (só processos vivos) |
+| `session-hub.ts` | Junta histórico, registro e terminais do app; publica histórico e status para o renderer |
 | `usage.ts` | Observa `~/.config/conductor/state/` e consolida os limites 5h e semanal |
 | `claude-bin.ts` | Localiza o binário `claude` e monta o ambiente do processo filho (D-015) |
 | `claude-launch.ts` | Valida diretório e nome e monta os argumentos do `claude` (`--session-id`, `--name`, `--resume`) |
@@ -98,9 +98,10 @@ terminal-orchestrator/
     │   ├── claude-launch.ts
     │   └── claude-data/
     │       ├── types.ts    # tipos dos formatos internos do Claude
-    │       ├── sessions.ts
-    │       ├── history.ts
-    │       └── context.ts
+    │       ├── paths.ts
+    │       ├── registry.ts
+    │       └── history.ts
+    ├── session-hub.ts
     ├── preload/
     │   └── index.ts
     └── renderer/

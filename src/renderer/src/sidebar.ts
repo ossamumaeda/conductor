@@ -20,6 +20,8 @@ export class Sidebar {
   private descending = true
   /** IDs na ordem exibida, usada pelo Ctrl+Tab. */
   order: string[] = []
+  /** Encurta caminhos absolutos com ~ na exibição. */
+  displayPath: (path: string) => string = (p) => p
   private readonly activeRows = byId<HTMLTableSectionElement>('active-rows')
   private readonly historyRows = byId<HTMLTableSectionElement>('history-rows')
   private readonly sortButton = byId<HTMLButtonElement>('sort-button')
@@ -94,22 +96,27 @@ export class Sidebar {
     return row
   }
 
-  renderHistory(items: HistoryItem[]): void {
-    byId('history-count').textContent = pad2(items.length)
+  /** `total` é o tamanho sem filtro de busca (vai no contador). */
+  renderHistory(items: HistoryItem[], total = items.length, filtered = false): void {
+    byId('history-count').textContent = pad2(total)
     const rows = items.map((item) => {
       const row = el('tr', {
         'data-id': item.sessionId,
         class: item.inUse ? 'in-use' : '',
-        title: item.inUse ? 'Aberta em outro terminal. Feche-a lá para poder retomar aqui.' : `Retomar ${item.title} · ${item.cwd}`
+        title: item.inUse
+          ? 'Aberta em outro terminal. Feche-a lá para poder retomar aqui.'
+          : `Retomar “${item.title}”\n${item.cwd}${item.branch ? ` · ${item.branch}` : ''}`
       },
-        el('td', {}, item.title, item.inUse && el('span', { class: 'tag' }, 'em uso')),
-        el('td', {}, item.cwd),
+        el('td', {}, el('div', { class: 'history-title' },
+          el('span', { class: 'history-title-text' }, item.title),
+          item.inUse && el('span', { class: 'tag' }, 'em uso'))),
+        el('td', {}, this.displayPath(item.cwd)),
         el('td', {}, formatActivity(item.lastActivity)))
       if (!item.inUse) row.addEventListener('click', () => this.handlers.onResume(item))
       return row
     })
     if (rows.length === 0) {
-      rows.push(el('tr', { class: 'empty-row' }, el('td', { colspan: 3 }, 'Nenhuma sessão anterior.')))
+      rows.push(el('tr', { class: 'empty-row' }, el('td', { colspan: 3 }, filtered ? 'Nada encontrado.' : 'Nenhuma sessão anterior.')))
     }
     this.historyRows.replaceChildren(...rows)
   }

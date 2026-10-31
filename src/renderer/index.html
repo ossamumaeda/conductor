@@ -31,10 +31,11 @@
       <section class="section history-section">
         <div class="section-head">
           <h2 class="section-title">Histórico <span class="count" id="history-count">00</span></h2>
-          <span class="history-topline">RECENTES</span>
+          <input class="history-search" id="history-search" type="search" placeholder="Buscar…" aria-label="Buscar no histórico" autocomplete="off" spellcheck="false" />
         </div>
         <div class="table-wrap">
           <table class="history-table">
+            <colgroup><col /><col class="col-dir" /><col class="col-date" /></colgroup>
             <thead><tr><th>Terminal</th><th>Diretório</th><th>Data</th></tr></thead>
             <tbody id="history-rows"></tbody>
           </table>
@@ -76,6 +77,8 @@
       <div class="usage-card" id="terminal-summary"></div>
     </footer>
   </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
   <dialog class="confirm-dialog" id="confirm-dialog" aria-labelledby="confirm-dialog-title">
     <form method="dialog">

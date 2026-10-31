@@ -53,15 +53,17 @@ Confirmar as hipóteses de `fontes-de-dados.md` antes de construir em cima delas
 
 **Resultado:** `scripts/e2e/fase-3.cjs` passa os 11 checks: começa vazio, erro de diretório inválido, abrir via diálogo e via chip de diretório recente, `--name` confirmado no registro (`nameSource: user`), `Ctrl+Tab`/`Ctrl+Shift+Tab`, `Ctrl+Shift+W` com confirmação e fechamento da janela sem deixar processos `claude` órfãos. A confirmação ao fechar o app só aparece com terminal trabalhando, o que depende do status real (fase 5).
 
-## Fase 4 — Histórico
-- [ ] `history.ts` varrendo `~/.claude/projects/` com cache por `mtime`
-- [ ] Título (`aiTitle`/nome), diretório e data relativa ("Hoje, 10:42")
-- [ ] Clique → `--resume` no `cwd` original, abrindo como terminal ativo
-- [ ] Busca por título e diretório
-- [ ] Tag "em uso" e retomada bloqueada para sessões abertas fora do app (D-010)
-- [ ] Atualização automática quando uma sessão é fechada
+## Fase 4 — Histórico ✅
+- [x] `history.ts` varrendo `~/.claude/projects/` com cache por tamanho + `mtime`
+- [x] Título (`customTitle` → `aiTitle` → primeiro prompt), diretório e data relativa ("Hoje, 10:42")
+- [x] Clique → `--resume` no `cwd` original, abrindo como terminal ativo
+- [x] Busca por título, diretório e branch (sem diferenciar maiúsculas e acentos)
+- [x] Tag "em uso" e retomada bloqueada para sessões abertas fora do app (D-010), também validado no main
+- [x] Atualização automática quando uma sessão é fechada ou quando qualquer `.jsonl` muda (`fs.watch` recursivo)
 
 **Pronto quando:** qualquer sessão antiga é retomada em um clique.
+
+**Resultado:** com os dados reais (24 sessões, 180 MB, arquivos de até 54 MB), a primeira varredura leva ~94 ms e as seguintes ~1 ms. Cada arquivo é lido só no início (256 KB, uma vez) e no fim (256 KB, quando muda). `scripts/e2e/fase-4.cjs` passa os 8 checks. Corrigido no caminho: fechar pelo app não é mais tratado como erro (o `claude` sai com código 129 no SIGHUP).
 
 ## Fase 5 — Status, contexto e uso
 - [ ] `sessions.ts` com a bolinha executando / aguardando / precisa de você em tempo real (D-012)

@@ -9,12 +9,13 @@ import '../styles.css'
 import type { HistoryItem, TerminalCreateRequest, TerminalSummary } from '../../shared/ipc'
 import { confirmDialog } from './dialogs'
 import { byId } from './dom'
-import { mockHistory, mockUsage } from './mock-data'
+import { mockUsage } from './mock-data'
 import { openNewTerminalDialog, setupNewTerminalDialog } from './new-terminal-dialog'
 import { rememberDir } from './recent-dirs'
 import { installShortcuts } from './shortcuts'
 import { Sidebar } from './sidebar'
 import { hideEmpty, setEmptyAction, showEmpty, showTerminalChrome, terminalHosts } from './terminal-view'
+import { showToast } from './toast'
 import { renderSummary, renderUsage } from './usage-footer'
 import { loadTerminalFonts, XtermSession } from './xterm-session'
 
@@ -25,11 +26,15 @@ interface Tab {
   session: XtermSession
 }
 
-// Histórico e uso continuam falsos até as fases 4 e 5.
+// O uso do plano continua falso até a fase 5.
 const tabs: Tab[] = []
-const history: HistoryItem[] = [...mockHistory]
+let history: HistoryItem[] = []
+let historyQuery = ''
 let selectedId: string | null = null
 let homeDir = ''
+
+/** Terminais que o usuário mandou fechar: a saída deles não é erro (o claude sai com 129 no SIGHUP). */
+const closing = new Set<string>()
 
 /** Saída que chegou antes de o renderer saber o ID do terminal (corrida do create). */
 const earlyOutput = new Map<string, string>()
@@ -38,11 +43,12 @@ const sidebar = new Sidebar(
   {
     onSelect: select,
     onRequestClose: (id) => void requestClose(id),
-    // Fase 4: `claude --resume <id>` no cwd original.
-    onResume: (item) => console.info('[fase 3] retomar sessão', item.sessionId)
+    onResume: (item) => void resume(item)
   },
   renderLists
 )
+
+sidebar.displayPath = (path) => tildify(path)
 
 function tildify(path: string): string {
   return homeDir && (path === homeDir || path.startsWith(`${homeDir}/`)) ? `~${path.slice(homeDir.length)}` : path
@@ -65,8 +71,9 @@ api.terminal.onExit(({ terminalId, exitCode, signal }) => {
   tabs.splice(index, 1)
   tab.session.dispose()
 
-  // Saída normal (/exit) ou fechada pelo app (SIGHUP): some sem alarde. Outra coisa: avisa.
-  const failed = exitCode !== 0 && signal === undefined
+  // Saída normal (/exit) ou fechada pelo app: some sem alarde. Outra coisa: avisa.
+  const requested = closing.delete(terminalId)
+  const failed = !requested && exitCode !== 0 && signal === undefined
   if (selectedId === terminalId) selectedId = tabs[Math.min(index, tabs.length - 1)]?.summary.terminalId ?? null
   render()
   if (failed && !selectedId) {
@@ -119,6 +126,36 @@ function select(terminalId: string): void {
   render()
 }
 
+// ---------- Histórico (fase 4) ----------
+/** Retoma no cwd original da sessão (D-013). Sessões "em uso" nem chegam aqui (D-010). */
+let resuming = false
+async function resume(item: HistoryItem): Promise<void> {
+  if (resuming) return
+  resuming = true
+  const error = await openTerminal({ cwd: item.cwd, name: item.title, resumeSessionId: item.sessionId })
+  resuming = false
+  if (error) showToast(`Não foi possível retomar “${item.title}”: ${error}`)
+}
+
+/** Busca sem diferenciar maiúsculas nem acentos. */
+const fold = (text: string): string => text.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
+
+function filteredHistory(): HistoryItem[] {
+  const query = fold(historyQuery.trim())
+  if (!query) return history
+  return history.filter((item) => fold(`${item.title} ${tildify(item.cwd)} ${item.branch ?? ''}`).includes(query))
+}
+
+api.history.onUpdate((items) => {
+  history = items
+  renderLists()
+})
+
+byId<HTMLInputElement>('history-search').addEventListener('input', (event) => {
+  historyQuery = (event.target as HTMLInputElement).value
+  renderLists()
+})
+
 /** Ctrl+Tab / Ctrl+Shift+Tab: segue a ordem exibida na sidebar. */
 function cycle(step: 1 | -1): void {
   const order = sidebar.order
@@ -132,7 +169,7 @@ function cycle(step: 1 | -1): void {
 function renderLists(): void {
   const summaries = tabs.map((t) => t.summary)
   sidebar.renderActive(summaries, selectedId)
-  sidebar.renderHistory(history)
+  sidebar.renderHistory(filteredHistory(), history.length, historyQuery.trim() !== '')
   renderSummary(summaries)
 }
 
@@ -163,8 +200,12 @@ async function requestClose(terminalId: string): Promise<void> {
     confirmLabel: 'Fechar terminal'
   })
   // O terminal sai da lista quando o processo terminar (onExit).
-  if (confirmed) api.terminal.kill(terminalId)
-  else refocus()
+  if (confirmed) {
+    closing.add(terminalId)
+    api.terminal.kill(terminalId)
+  } else {
+    refocus()
+  }
 }
 
 // D-011: fechar a janela encerra tudo. Só pergunta se algum terminal estiver trabalhando.
@@ -202,9 +243,10 @@ installShortcuts({
 renderUsage(mockUsage)
 render()
 
-void api.getAppInfo().then((info) => {
+void api.getAppInfo().then(async (info) => {
   homeDir = info.homeDir
   byId('app-info').textContent = info.claudeVersion ? `CLAUDE ${info.claudeVersion}` : 'CLAUDE NÃO ENCONTRADO'
   byId('app-info').title = `Conductor ${info.appVersion} · Electron ${info.electronVersion}`
+  history = await api.history.get()
   render()
 })

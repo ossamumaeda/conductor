@@ -10,6 +10,7 @@ export interface PtyEvents {
 
 interface Entry {
   proc: IPty
+  sessionId: string
   /** Saída acumulada até o próximo flush (ver `queue`). */
   pending: string
   flushScheduled: boolean
@@ -25,7 +26,7 @@ export class PtyManager {
 
   constructor(private readonly events: PtyEvents) {}
 
-  create(options: { file: string; args: string[]; cwd: string; cols: number; rows: number }): string {
+  create(options: { sessionId: string; file: string; args: string[]; cwd: string; cols: number; rows: number }): string {
     const terminalId = randomUUID()
     const proc = spawn(options.file, options.args, {
       name: 'xterm-256color',
@@ -34,7 +35,7 @@ export class PtyManager {
       rows: Math.max(2, options.rows),
       env: childEnv()
     })
-    const entry: Entry = { proc, pending: '', flushScheduled: false }
+    const entry: Entry = { proc, sessionId: options.sessionId, pending: '', flushScheduled: false }
     this.entries.set(terminalId, entry)
 
     proc.onData((data) => this.queue(terminalId, entry, data))
@@ -81,6 +82,16 @@ export class PtyManager {
 
   killAll(): void {
     for (const id of this.entries.keys()) this.kill(id)
+  }
+
+  hasSession(sessionId: string): boolean {
+    for (const entry of this.entries.values()) if (entry.sessionId === sessionId) return true
+    return false
+  }
+
+  /** terminalId → sessionId dos terminais abertos. */
+  sessions(): Array<{ terminalId: string; sessionId: string }> {
+    return [...this.entries].map(([terminalId, e]) => ({ terminalId, sessionId: e.sessionId }))
   }
 
   get size(): number {

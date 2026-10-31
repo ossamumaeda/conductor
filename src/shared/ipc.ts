@@ -17,7 +17,11 @@ export const IPC = {
   /** main → renderer: o usuário tentou fechar a janela com terminais abertos (D-011). */
   appCloseRequested: 'app:close-requested',
   /** send: renderer confirma o fechamento. */
-  appConfirmClose: 'app:confirm-close'
+  appConfirmClose: 'app:confirm-close',
+  /** invoke: lista atual do histórico. */
+  historyGet: 'history:get',
+  /** main → renderer: histórico mudou (lista completa). */
+  historyUpdate: 'history:update'
 } as const
 
 export interface TerminalCreateRequest {
@@ -80,7 +84,9 @@ export interface TerminalSummary {
 export interface HistoryItem {
   sessionId: string
   title: string
+  /** Absoluto. A interface encurta com ~ na exibição. */
   cwd: string
+  branch: string | null
   /** Epoch em ms. */
   lastActivity: number
   /** Aberta em outro processo `claude` fora do app: não pode ser retomada (D-010). */
@@ -111,6 +117,10 @@ export interface ConductorApi {
     /** Retorna a função para cancelar a inscrição. */
     onData(listener: (event: TerminalDataEvent) => void): () => void
     onExit(listener: (event: TerminalExitEvent) => void): () => void
+  }
+  history: {
+    get(): Promise<HistoryItem[]>
+    onUpdate(listener: (items: HistoryItem[]) => void): () => void
   }
   pickDirectory(defaultPath?: string): Promise<string | null>
   onCloseRequested(listener: () => void): () => void
