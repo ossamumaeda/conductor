@@ -1,18 +1,21 @@
-// Painel direito. Na fase 2, o conteúdo falso dá lugar ao xterm.js com a TUI real (D-003).
+// Cabeçalho, barras e estado vazio do painel direito. O terminal em si é um XtermSession.
 
+import type { TerminalSummary } from '../../shared/ipc'
 import { byId, el } from './dom'
 import { formatTokens, STATUS_LABEL, statusClass } from './format'
-import type { FakeLine, MockTerminal } from './mock-data'
 import { contextPercent } from './sidebar'
 
 const title = byId('terminal-title')
 const live = byId('terminal-live')
 const path = byId('terminal-path')
-const content = byId('terminal-content')
+const empty = byId('terminal-empty')
 const sessionState = byId('session-state')
 const tokenStatus = byId('token-status')
 
-export function showTerminal(t: MockTerminal): void {
+export const terminalHosts = byId('terminal-hosts')
+
+export function showTerminalChrome(t: TerminalSummary): void {
+  empty.hidden = true
   title.textContent = t.name
   path.textContent = t.cwd
   live.hidden = false
@@ -22,45 +25,28 @@ export function showTerminal(t: MockTerminal): void {
 
   const ctx = t.context
     ? `contexto ${contextPercent(t)}% (${formatTokens(t.context.usedTokens)} / ${formatTokens(t.context.windowSize)})`
-    : 'contexto —'
+    : null
   tokenStatus.replaceChildren(
     ...[ctx, t.model, t.branch].filter((part): part is string => Boolean(part))
       .flatMap((part, i) => (i === 0 ? [part] : [el('span', { class: 'sep' }, ' · '), part]))
   )
-
-  content.replaceChildren(
-    el('p', { class: 'welcome' }, `Conectado a ${t.cwd}`,
-      t.branch && el('span', { class: 'tone-muted' }, ' · branch '),
-      t.branch && el('span', { class: 'tone-success' }, t.branch)),
-    ...t.lines.map(renderLine)
-  )
 }
 
-function renderLine(line: FakeLine): HTMLElement {
-  switch (line.kind) {
-    case 'prompt':
-      return el('div', { class: 'cursorline' },
-        el('span', { class: 'prompt' }, line.text),
-        line.text === '❯' && el('i', { class: 'cursor' }))
-    case 'command':
-      return el('div', { class: 'command' }, line.text)
-    case 'output': {
-      const parts = line.parts.map(([tone, text]) => (tone ? el('span', { class: `tone-${tone}` }, text) : text))
-      const empty = line.parts.every(([, text]) => text === '')
-      return el('div', { class: 'output' }, ...(empty ? [' '] : parts))
-    }
-  }
+/** O estado vazio esconde a área dos terminais (CSS); precisa sair antes de medir um xterm novo. */
+export function hideEmpty(): void {
+  empty.hidden = true
 }
 
-export function showEmpty(): void {
+export function showEmpty(message?: { title: string; detail: string; error?: boolean }): void {
   title.textContent = 'Nenhum terminal ativo'
   path.textContent = ''
   live.hidden = true
   sessionState.textContent = 'nenhuma sessão'
   tokenStatus.textContent = ''
-  content.replaceChildren(
-    el('div', { class: 'empty-terminal' },
-      el('strong', {}, 'Nenhum terminal ativo'),
-      el('p', {}, 'Abra um novo terminal com + (Ctrl+Shift+T) ou retome uma sessão do histórico.'))
+  empty.hidden = false
+  empty.className = `empty-terminal ${message?.error ? 'error' : ''}`
+  empty.replaceChildren(
+    el('strong', {}, message?.title ?? 'Nenhum terminal ativo'),
+    el('p', {}, message?.detail ?? 'Abra um novo terminal com + ou retome uma sessão do histórico.')
   )
 }

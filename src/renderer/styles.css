@@ -56,7 +56,11 @@ td { padding: 12px 20px; border-top: 1px solid var(--line-soft); font-size: 12px
 .active-table td { padding-top: 9px; padding-bottom: 9px; }
 .terminal-name { display: flex; align-items: center; gap: 9px; color: #e2e6eb; font-weight: 600; white-space: nowrap; }
 .terminal-label { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
-.terminal-directory { max-width: 180px; overflow: hidden; color: #7e8995; font: 10px var(--mono); text-overflow: ellipsis; white-space: nowrap; }
+.terminal-directory { max-width: 100%; overflow: hidden; color: #7e8995; font: 10px var(--mono); text-overflow: ellipsis; white-space: nowrap; }
+/* A primeira coluna absorve a sobra e corta o caminho com reticências, sem rolagem horizontal. */
+.active-table td:first-child { width: 100%; max-width: 0; }
+.terminal-name, .terminal-label, .terminal-label > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.active-section .table-wrap { overflow-x: hidden; }
 
 /* Bolinha de status (D-012) */
 .status-dot { display: inline-block; width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--status-busy); box-shadow: 0 0 9px color-mix(in srgb, var(--status-busy) 35%, transparent); }
@@ -86,7 +90,8 @@ td { padding: 12px 20px; border-top: 1px solid var(--line-soft); font-size: 12px
 
 .history-table td { color: #afb7c1; font: 10px var(--mono); white-space: nowrap; }
 .history-table td:first-child { color: #d7dce2; font: 500 11px var(--sans); }
-.history-table td:nth-child(2) { max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+/* O diretório é a coluna que encolhe: título e data ficam sempre inteiros. */
+.history-table td:nth-child(2) { width: 100%; max-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .history-table tbody tr[data-id] { cursor: pointer; }
 .history-table tbody tr[data-id]:hover { background: #151a21; }
 .history-table tbody tr.in-use { cursor: not-allowed; }
@@ -115,21 +120,17 @@ td { padding: 12px 20px; border-top: 1px solid var(--line-soft); font-size: 12px
 .keyhint { flex: none; margin-left: 16px; }
 .key { padding: 2px 5px; border: 1px solid #303842; border-radius: 4px; color: #abb4be; }
 
-.terminal { position: relative; flex: 1; min-height: 0; overflow: auto; padding: 28px 32px 48px; color: #d0d6dd; font: 12px/1.85 var(--mono); }
-.terminal-content { max-width: 880px; }
-.welcome { margin: 0 0 22px; color: #777f8a; }
-.prompt { color: #91d99b; }
-.command { color: #e9edf1; }
-.output { margin: 5px 0 19px; color: #aeb6c0; }
-.tone-muted { color: #73808b; }
-.tone-highlight { color: #d8e4d8; }
-.tone-success { color: #8bd497; }
-.tone-warning { color: #e8c278; }
-.cursorline { display: flex; align-items: center; gap: 7px; margin-top: 4px; }
-.cursor { width: 7px; height: 15px; background: #a6e2a9; animation: blink 1.1s steps(2, start) infinite; }
-@keyframes blink { to { visibility: hidden; } }
+/* xterm.js (fase 2). O padding fica no container: o FitAddon mede o espaço interno do host. */
+.terminal { position: relative; display: flex; flex: 1; min-height: 0; overflow: hidden; padding: 16px 8px 8px 24px; }
+.terminal-hosts { position: relative; flex: 1; min-width: 0; min-height: 0; }
+.xterm-host { position: absolute; inset: 0; }
+.xterm-host[hidden] { display: none; }
+.terminal-hosts:has(+ .empty-terminal:not([hidden])) { display: none; }
+.xterm .xterm-viewport { background: transparent !important; scrollbar-width: thin; scrollbar-color: #303944 transparent; }
 
 .empty-terminal { max-width: 500px; margin: 15vh auto 0; color: #8d98a4; text-align: center; }
+.empty-terminal[hidden] { display: none; }
+.empty-terminal.error strong { color: #ffb0b0; }
 .empty-terminal strong { display: block; margin-bottom: 8px; color: #e0e5ea; font: 500 15px var(--sans); }
 .empty-terminal p { font: 12px/1.7 var(--sans); }
 
@@ -151,6 +152,7 @@ td { padding: 12px 20px; border-top: 1px solid var(--line-soft); font-size: 12px
 .summary-list { display: flex; flex-wrap: wrap; gap: 4px 14px; color: #c3cad2; font: 10px var(--mono); }
 .summary-item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .summary-item.zero { color: var(--faint); }
+.summary-item.zero .status-dot { animation: none; box-shadow: none; opacity: .55; }
 .summary-item .status-dot { width: 6px; height: 6px; }
 
 /* ---------- Diálogo ---------- */

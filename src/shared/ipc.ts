@@ -1,10 +1,41 @@
 // Contrato entre main, preload e renderer (ver docs/arquitetura.md).
-// Fase 1 implementa só `app:info`. Os demais tipos já descrevem os dados
-// das próximas fases, para que a interface seja construída sobre eles.
+// Implementado até a fase 2: `app:info` e os canais `terminal:*`.
+// Os demais tipos já descrevem os dados das próximas fases.
 
 export const IPC = {
-  appInfo: 'app:info'
+  appInfo: 'app:info',
+  /** invoke: renderer → main. */
+  terminalCreate: 'terminal:create',
+  /** send (sem resposta, caminho quente): renderer → main. */
+  terminalWrite: 'terminal:write',
+  terminalResize: 'terminal:resize',
+  terminalKill: 'terminal:kill',
+  /** eventos: main → renderer. */
+  terminalData: 'terminal:data',
+  terminalExit: 'terminal:exit'
 } as const
+
+export interface TerminalCreateRequest {
+  /** Diretório inicial. Omitido: diretório padrão do app (fase 2). */
+  cwd?: string
+  cols: number
+  rows: number
+}
+
+export type TerminalCreateResult =
+  | { ok: true; terminalId: string; cwd: string }
+  | { ok: false; error: string }
+
+export interface TerminalDataEvent {
+  terminalId: string
+  data: string
+}
+
+export interface TerminalExitEvent {
+  terminalId: string
+  exitCode: number
+  signal?: number
+}
 
 /** Status do registro `~/.claude/sessions/<pid>.json` (D-012). */
 export type SessionStatus = 'busy' | 'idle' | 'waiting'
@@ -14,6 +45,7 @@ export interface AppInfo {
   electronVersion: string
   /** `null` quando o binário `claude` não foi encontrado no PATH. */
   claudeVersion: string | null
+  homeDir: string
 }
 
 export interface ContextUsage {
@@ -60,4 +92,13 @@ export interface UsageSnapshot {
 /** API exposta pelo preload em `window.conductor`. */
 export interface ConductorApi {
   getAppInfo(): Promise<AppInfo>
+  terminal: {
+    create(request: TerminalCreateRequest): Promise<TerminalCreateResult>
+    write(terminalId: string, data: string): void
+    resize(terminalId: string, cols: number, rows: number): void
+    kill(terminalId: string): void
+    /** Retorna a função para cancelar a inscrição. */
+    onData(listener: (event: TerminalDataEvent) => void): () => void
+    onExit(listener: (event: TerminalExitEvent) => void): () => void
+  }
 }

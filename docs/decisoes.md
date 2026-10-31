@@ -183,6 +183,37 @@ Status desconhecidos (ex.: `requires_action`) são tratados como "aguardando".
 
 ---
 
+## D-014 — Teclado e área de transferência no terminal
+**Status:** Aceita · **Data:** 2026-10-31
+
+**Decisão.**
+- O menu padrão do Electron é removido (`Menu.setApplicationMenu(null)`), porque ele capturava `Ctrl+W`, `Ctrl+R` e `Ctrl+C`. Em desenvolvimento, `F12` abre as DevTools.
+- `Ctrl+Shift+C` copia a seleção do xterm e `Ctrl+Shift+V` cola texto (com *bracketed paste*), no padrão dos terminais Linux.
+- `Ctrl+C` e `Ctrl+V` vão direto para o Claude: interromper e colar imagem.
+- O Chromium só tem permissão de área de transferência (`clipboard-read` e `clipboard-sanitized-write`); todas as outras são negadas.
+
+**Observação.** Se a TUI ativar o modo mouse, a seleção com o mouse no xterm passa a exigir `Shift` + arrastar. Isso é comportamento padrão de terminal.
+
+---
+
+## D-015 — Ambiente do `claude` filho
+**Status:** Aceita · **Data:** 2026-10-31
+
+**Decisão.** O `claude` de cada terminal herda o ambiente do app, menos as variáveis do Electron/Vite, do próprio app (`CONDUCTOR_*`) e as que uma sessão do Claude Code define para os processos dela (`CLAUDECODE`, `CLAUDE_CODE_SESSION_ID`, `CLAUDE_CODE_MESSAGING_*` etc.). `TERM=xterm-256color` e `COLORTERM=truecolor` são fixados.
+
+**Por quê.** Se o app fosse aberto de dentro de uma sessão do Claude Code, o `claude` filho se acharia uma subsessão dela.
+
+**Binário.** É procurado no `PATH` e, depois, em `~/.local/bin/claude` e `~/.claude/local/claude`. Aberto pelo menu do sistema, o app herda um PATH reduzido.
+
+---
+
+## D-016 — Fonte de símbolos para a TUI
+**Status:** Aceita · **Data:** 2026-10-31
+
+**Decisão.** O xterm usa `"DM Mono", "Noto Sans Symbols 2", "DejaVu Sans Mono", monospace`. O DM Mono não tem símbolos que a TUI usa (ex.: `⏵⏵` do "auto mode"), e nenhuma fonte instalada no sistema tinha. A Noto Sans Symbols 2 vai empacotada (`@fontsource`). Caracteres de desenho de caixa são desenhados pelo próprio xterm (glifos customizados do WebGL).
+
+---
+
 ## Em aberto
 
 Nenhuma questão em aberto no momento.

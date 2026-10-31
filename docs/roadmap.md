@@ -30,13 +30,15 @@ Confirmar as hipóteses de `fontes-de-dados.md` antes de construir em cima delas
 
 **Resultado:** visual conferido lado a lado com o mockup em 1400×880. Já aplicados: a cor "precisa de você" (D-012), o rodapé novo (D-006), a tag "em uso" (D-010) e a dica `Ctrl+Tab` (D-007). A ponte segura já funciona de ponta a ponta: o topo da sidebar mostra a versão real do `claude`.
 
-## Fase 2 — Um terminal real
-- [ ] `pty-manager` fazendo spawn do `claude` em um diretório fixo
-- [ ] xterm.js no painel direito, com os addons fit e webgl e as fontes do mockup
-- [ ] Redimensionamento correto ao mudar o tamanho da janela
-- [ ] Copiar/colar funcionando
+## Fase 2 — Um terminal real ✅
+- [x] `pty-manager` fazendo spawn do `claude` em um diretório fixo
+- [x] xterm.js no painel direito, com os addons fit e webgl e as fontes do mockup
+- [x] Redimensionamento correto ao mudar o tamanho da janela
+- [x] Copiar/colar funcionando
 
 **Pronto quando:** dá para conversar com o Claude dentro do app como na TUI normal, inclusive aprovando permissões.
+
+**Resultado:** validado com o roteiro `scripts/e2e/fase-2.cjs`, que tira prints a cada passo. Funcionam: digitação, autocompletar de `/comandos`, `Ctrl+Shift+V`, `Ctrl+C` e `Ctrl+U` chegando ao Claude, a pergunta de confiança na pasta, o redimensionamento e o `/exit` tirando o terminal da lista. Ver D-014 a D-016.
 
 ## Fase 3 — Vários terminais
 - [ ] Botão "+": escolher diretório e nome, depois spawn com `--session-id`, `--name` e `--settings`

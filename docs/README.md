@@ -23,6 +23,8 @@ npm run typecheck        # checagem de tipos (main/preload e renderer)
 npm run build            # build de produção em out/
 ```
 
+Roteiros e2e (só em desenvolvimento): `CONDUCTOR_E2E=$PWD/scripts/e2e/fase-2.cjs CONDUCTOR_E2E_OUT=/tmp/e2e CONDUCTOR_CWD=~/Projects npx electron-vite preview --skipBuild`. O roteiro recebe a janela, digita no terminal e salva prints. `CONDUCTOR_CLAUDE_ARGS` passa argumentos extras ao `claude` (ex.: `--model haiku`).
+
 Para verificação visual automatizada: `CONDUCTOR_CAPTURE=/caminho/print.png npx electron-vite preview` salva um print da janela e fecha o app.
 
 ## Referências
