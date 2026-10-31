@@ -164,6 +164,25 @@ td { padding: 12px 20px; border-top: 1px solid var(--line-soft); font-size: 12px
 .dialog-button { padding: 8px 12px; border: 1px solid #353e49; border-radius: 6px; background: #1a2028; color: #dce2e8; font-size: 11px; cursor: pointer; }
 .dialog-button.danger { border-color: #944d50; background: #8b3c40; color: #fff; }
 .dialog-button:hover { filter: brightness(1.14); }
+.dialog-button.primary { border-color: #4f8a5a; background: #2f5a38; color: #eaf7ec; }
+.dialog-button:disabled { opacity: .5; cursor: progress; }
+
+/* Diálogo "Novo terminal" */
+.form-dialog { width: min(480px, calc(100vw - 32px)); }
+.form-dialog h2 { margin-bottom: 18px; }
+.field { display: block; margin: 14px 0 6px; color: #aeb7c2; font-size: 11px; font-weight: 600; letter-spacing: .04em; }
+.field-hint { margin-left: 6px; color: var(--faint); font-weight: 400; letter-spacing: 0; }
+.field-row { display: flex; gap: 8px; }
+.input { width: 100%; min-width: 0; padding: 8px 10px; border: 1px solid #353e49; border-radius: 6px; background: #0f1318; color: var(--text); font: 12px var(--sans); outline: none; }
+.input.mono { font: 12px var(--mono); }
+.input:focus { border-color: #4f8a5a; box-shadow: 0 0 0 2px #4f8a5a33; }
+.recent-dirs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.recent-dirs:empty { display: none; }
+.chip { max-width: 100%; overflow: hidden; padding: 3px 8px; border: 1px solid #303944; border-radius: 999px; background: #10151a; color: #aab3bd; font: 10px var(--mono); text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.chip:hover { border-color: #46515d; color: var(--text); }
+.form-error { margin: 12px 0 0 !important; color: #ffb0b0 !important; }
+.form-error[hidden] { display: none; }
+.empty-terminal .dialog-button { margin-top: 14px; }
 
 /* Janela mínima do app é 900px; abaixo de 1100px o layout aperta um pouco. */
 @media (max-width: 1100px) {

@@ -19,7 +19,10 @@ const api: ConductorApi = {
     kill: (terminalId) => ipcRenderer.send(IPC.terminalKill, terminalId),
     onData: (listener) => subscribe<TerminalDataEvent>(IPC.terminalData, listener),
     onExit: (listener) => subscribe<TerminalExitEvent>(IPC.terminalExit, listener)
-  }
+  },
+  pickDirectory: (defaultPath) => ipcRenderer.invoke(IPC.dialogPickDirectory, defaultPath),
+  onCloseRequested: (listener) => subscribe<void>(IPC.appCloseRequested, listener),
+  confirmClose: () => ipcRenderer.send(IPC.appConfirmClose)
 }
 
 contextBridge.exposeInMainWorld('conductor', api)

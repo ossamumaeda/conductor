@@ -32,7 +32,8 @@ flowchart LR
 | `claude-data/history.ts` | Varre `~/.claude/projects/` e monta a lista do histórico (título, cwd, data, branch) |
 | `claude-data/context.ts` | Calcula o contexto usado de uma sessão a partir do `.jsonl` |
 | `usage.ts` | Observa `~/.config/conductor/state/` e consolida os limites 5h e semanal |
-| `shortcuts.ts` | Captura `Ctrl+Tab`, `Ctrl+Shift+Tab`, `Ctrl+Shift+T` e `Ctrl+Shift+W` antes que cheguem ao terminal (D-007) |
+| `claude-bin.ts` | Localiza o binário `claude` e monta o ambiente do processo filho (D-015) |
+| `claude-launch.ts` | Valida diretório e nome e monta os argumentos do `claude` (`--session-id`, `--name`, `--resume`) |
 | `resources/statusline.cjs` | Script **executado pelo `claude`**, não pelo app (D-005) |
 
 ### Preload (`src/preload/index.ts`)
@@ -93,7 +94,8 @@ terminal-orchestrator/
     │   ├── index.ts
     │   ├── pty-manager.ts
     │   ├── usage.ts
-    │   ├── shortcuts.ts
+    │   ├── claude-bin.ts
+    │   ├── claude-launch.ts
     │   └── claude-data/
     │       ├── types.ts    # tipos dos formatos internos do Claude
     │       ├── sessions.ts
@@ -106,6 +108,11 @@ terminal-orchestrator/
         ├── styles.css
         └── src/
             ├── main.ts          # estado e ligação entre as partes
+            ├── xterm-session.ts # um xterm.js ligado a um pty (D-003, D-014)
+            ├── new-terminal-dialog.ts
+            ├── dialogs.ts       # confirmação reutilizável
+            ├── shortcuts.ts     # atalhos do app, capturados antes do xterm (D-007)
+            ├── recent-dirs.ts   # diretórios recentes (localStorage)
             ├── sidebar.ts       # terminais ativos + histórico
             ├── terminal-view.ts # painel direito (xterm.js na fase 2)
             ├── usage-footer.ts  # rodapé (D-006)

@@ -77,13 +77,33 @@
     </footer>
   </main>
 
-  <dialog class="confirm-dialog" id="close-dialog" aria-labelledby="close-dialog-title">
+  <dialog class="confirm-dialog" id="confirm-dialog" aria-labelledby="confirm-dialog-title">
     <form method="dialog">
-      <h2 id="close-dialog-title">Fechar terminal?</h2>
-      <p id="close-dialog-message">A sessão será encerrada e movida para o histórico.</p>
+      <h2 id="confirm-dialog-title">Fechar terminal?</h2>
+      <p id="confirm-dialog-message"></p>
       <div class="dialog-actions">
         <button class="dialog-button" value="cancel">Cancelar</button>
-        <button class="dialog-button danger" value="confirm">Fechar terminal</button>
+        <button class="dialog-button danger" value="confirm" id="confirm-dialog-ok">Fechar terminal</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="confirm-dialog form-dialog" id="new-dialog" aria-labelledby="new-dialog-title">
+    <form method="dialog" id="new-form" novalidate>
+      <h2 id="new-dialog-title">Novo terminal</h2>
+      <label class="field" for="new-cwd">Diretório</label>
+      <div class="field-row">
+        <input class="input mono" id="new-cwd" autocomplete="off" spellcheck="false" placeholder="~/Projects/meu-projeto" />
+        <button class="dialog-button" type="button" id="new-browse">Escolher…</button>
+      </div>
+      <div class="recent-dirs" id="recent-dirs"></div>
+      <label class="field" for="new-name">Nome <span class="field-hint">opcional · padrão: nome da pasta</span></label>
+      <input class="input" id="new-name" maxlength="60" autocomplete="off" spellcheck="false" />
+      <p class="form-error" id="new-error" hidden></p>
+      <div class="dialog-actions">
+        <!-- type="button": com Enter, o formulário aciona o primeiro botão de envio, que precisa ser "Abrir". -->
+        <button class="dialog-button" type="button" id="new-cancel">Cancelar</button>
+        <button class="dialog-button primary" value="confirm" id="new-submit">Abrir terminal</button>
       </div>
     </form>
   </dialog>

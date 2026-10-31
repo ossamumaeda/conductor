@@ -1,6 +1,5 @@
 // Contrato entre main, preload e renderer (ver docs/arquitetura.md).
-// Implementado até a fase 2: `app:info` e os canais `terminal:*`.
-// Os demais tipos já descrevem os dados das próximas fases.
+// Os tipos de histórico e uso descrevem dados das fases 4 e 5.
 
 export const IPC = {
   appInfo: 'app:info',
@@ -12,19 +11,31 @@ export const IPC = {
   terminalKill: 'terminal:kill',
   /** eventos: main → renderer. */
   terminalData: 'terminal:data',
-  terminalExit: 'terminal:exit'
+  terminalExit: 'terminal:exit',
+  /** invoke: seletor nativo de diretório. */
+  dialogPickDirectory: 'dialog:pick-directory',
+  /** main → renderer: o usuário tentou fechar a janela com terminais abertos (D-011). */
+  appCloseRequested: 'app:close-requested',
+  /** send: renderer confirma o fechamento. */
+  appConfirmClose: 'app:confirm-close'
 } as const
 
 export interface TerminalCreateRequest {
-  /** Diretório inicial. Omitido: diretório padrão do app (fase 2). */
+  /** Diretório inicial (absoluto ou com ~). Omitido: diretório pessoal. */
   cwd?: string
+  /** Nome exibido (`--name`). Omitido: nome da pasta. */
+  name?: string
+  /** Retomar esta sessão (`--resume`) em vez de criar uma nova (D-013). */
+  resumeSessionId?: string
   cols: number
   rows: number
 }
 
 export type TerminalCreateResult =
-  | { ok: true; terminalId: string; cwd: string }
+  | { ok: true; terminalId: string; sessionId: string; cwd: string; name: string }
   | { ok: false; error: string }
+
+export const NAME_MAX_LENGTH = 60
 
 export interface TerminalDataEvent {
   terminalId: string
@@ -101,4 +112,7 @@ export interface ConductorApi {
     onData(listener: (event: TerminalDataEvent) => void): () => void
     onExit(listener: (event: TerminalExitEvent) => void): () => void
   }
+  pickDirectory(defaultPath?: string): Promise<string | null>
+  onCloseRequested(listener: () => void): () => void
+  confirmClose(): void
 }

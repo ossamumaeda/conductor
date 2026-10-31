@@ -18,6 +18,8 @@ const WARN_AT = 85
 
 export class Sidebar {
   private descending = true
+  /** IDs na ordem exibida, usada pelo Ctrl+Tab. */
+  order: string[] = []
   private readonly activeRows = byId<HTMLTableSectionElement>('active-rows')
   private readonly historyRows = byId<HTMLTableSectionElement>('history-rows')
   private readonly sortButton = byId<HTMLButtonElement>('sort-button')
@@ -41,6 +43,7 @@ export class Sidebar {
     const ordered = [...terminals].sort((a, b) =>
       this.descending ? contextPercent(b) - contextPercent(a) : contextPercent(a) - contextPercent(b)
     )
+    this.order = ordered.map((t) => t.terminalId)
     const rows = ordered.map((t) => this.activeRow(t, t.terminalId === selectedId))
     if (rows.length === 0) {
       rows.push(el('tr', { class: 'empty-row' }, el('td', { colspan: 3 }, 'Nenhum terminal aberto. Use + ou retome uma sessão do histórico.')))

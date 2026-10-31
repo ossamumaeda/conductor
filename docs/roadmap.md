@@ -40,16 +40,18 @@ Confirmar as hipóteses de `fontes-de-dados.md` antes de construir em cima delas
 
 **Resultado:** validado com o roteiro `scripts/e2e/fase-2.cjs`, que tira prints a cada passo. Funcionam: digitação, autocompletar de `/comandos`, `Ctrl+Shift+V`, `Ctrl+C` e `Ctrl+U` chegando ao Claude, a pergunta de confiança na pasta, o redimensionamento e o `/exit` tirando o terminal da lista. Ver D-014 a D-016.
 
-## Fase 3 — Vários terminais
-- [ ] Botão "+": escolher diretório e nome, depois spawn com `--session-id`, `--name` e `--settings`
-- [ ] Lista de terminais ativos ligada ao `pty-manager`
-- [ ] Troca de terminal preservando o estado (instâncias escondidas, não destruídas)
-- [ ] Fechar com o diálogo de confirmação, matando o processo
-- [ ] Atalhos `Ctrl+Tab` / `Ctrl+Shift+Tab`, `Ctrl+Shift+T` e `Ctrl+Shift+W` (D-007)
-- [ ] Ao fechar o app: confirmar se houver terminal executando e encerrar todos (D-011)
-- [ ] Tratar o caso em que o processo sai sozinho (`/exit`, crash)
+## Fase 3 — Vários terminais ✅
+- [x] Botão "+": escolher diretório e nome, depois spawn com `--session-id` e `--name` (o `--settings` entra na fase 5)
+- [x] Lista de terminais ativos ligada ao `pty-manager`
+- [x] Troca de terminal preservando o estado (instâncias escondidas, não destruídas)
+- [x] Fechar com o diálogo de confirmação, matando o processo
+- [x] Atalhos `Ctrl+Tab` / `Ctrl+Shift+Tab`, `Ctrl+Shift+T` e `Ctrl+Shift+W` (D-007)
+- [x] Ao fechar o app: confirmar se houver terminal executando e encerrar todos (D-011)
+- [x] Tratar o caso em que o processo sai sozinho (`/exit`, crash)
 
 **Pronto quando:** 4 sessões rodam em paralelo e a troca entre elas é instantânea.
+
+**Resultado:** `scripts/e2e/fase-3.cjs` passa os 11 checks: começa vazio, erro de diretório inválido, abrir via diálogo e via chip de diretório recente, `--name` confirmado no registro (`nameSource: user`), `Ctrl+Tab`/`Ctrl+Shift+Tab`, `Ctrl+Shift+W` com confirmação e fechamento da janela sem deixar processos `claude` órfãos. A confirmação ao fechar o app só aparece com terminal trabalhando, o que depende do status real (fase 5).
 
 ## Fase 4 — Histórico
 - [ ] `history.ts` varrendo `~/.claude/projects/` com cache por `mtime`

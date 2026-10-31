@@ -14,6 +14,13 @@ const tokenStatus = byId('token-status')
 
 export const terminalHosts = byId('terminal-hosts')
 
+let emptyAction: (() => void) | null = null
+
+/** Ação do botão "Novo terminal" do estado vazio. */
+export function setEmptyAction(action: () => void): void {
+  emptyAction = action
+}
+
 export function showTerminalChrome(t: TerminalSummary): void {
   empty.hidden = true
   title.textContent = t.name
@@ -47,6 +54,13 @@ export function showEmpty(message?: { title: string; detail: string; error?: boo
   empty.className = `empty-terminal ${message?.error ? 'error' : ''}`
   empty.replaceChildren(
     el('strong', {}, message?.title ?? 'Nenhum terminal ativo'),
-    el('p', {}, message?.detail ?? 'Abra um novo terminal com + ou retome uma sessão do histórico.')
+    el('p', {}, message?.detail ?? 'Abra um novo terminal ou retome uma sessão do histórico.'),
+    newButton()
   )
+}
+
+function newButton(): HTMLButtonElement {
+  const button = el('button', { class: 'dialog-button primary', type: 'button' }, 'Novo terminal  ·  Ctrl+Shift+T')
+  button.addEventListener('click', () => emptyAction?.())
+  return button
 }

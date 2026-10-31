@@ -1,6 +1,6 @@
-import { app, BrowserWindow, ipcMain, Menu, session, shell, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, session, shell, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron'
 import { execFile } from 'node:child_process'
-import { existsSync, statSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
 import { writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { homedir } from 'node:os'
@@ -8,12 +8,15 @@ import { join } from 'node:path'
 import { promisify } from 'node:util'
 import { IPC, type AppInfo, type TerminalCreateRequest, type TerminalCreateResult } from '../shared/ipc'
 import { resolveClaudeBinary } from './claude-bin'
+import { buildClaudeArgs, isSessionId, resolveDirectory, sanitizeName } from './claude-launch'
 import { PtyManager } from './pty-manager'
 
 const execFileAsync = promisify(execFile)
 const isDev = !app.isPackaged
 
 let mainWindow: BrowserWindow | null = null
+/** Vira true quando o renderer confirma o fechamento com terminais abertos (D-011). */
+let closeConfirmed = false
 
 const ptys = new PtyManager({
   data: (event) => mainWindow?.webContents.send(IPC.terminalData, event),
@@ -29,11 +32,6 @@ async function readClaudeVersion(): Promise<string | null> {
   } catch {
     return null
   }
-}
-
-/** Fase 2: diretório fixo. A fase 3 troca por um seletor. */
-function defaultCwd(): string {
-  return process.env['CONDUCTOR_CWD'] ?? homedir()
 }
 
 /** Só em desenvolvimento: argumentos extras para o `claude` (ex.: "--model haiku" nos testes). */
@@ -65,12 +63,20 @@ function registerIpc(): void {
     const file = resolveClaudeBinary()
     if (!file) return { ok: false, error: 'Binário `claude` não encontrado. Instale o Claude Code e confira o PATH.' }
 
-    const cwd = isStr(request.cwd) ? request.cwd : defaultCwd()
-    if (!existsSync(cwd) || !statSync(cwd).isDirectory()) return { ok: false, error: `Diretório não existe: ${cwd}` }
+    // CONDUCTOR_CWD (testes) só vale quando o renderer não escolheu um diretório.
+    const requestedCwd = isStr(request.cwd) ? request.cwd : process.env['CONDUCTOR_CWD']
+    const cwd = resolveDirectory(requestedCwd)
+    if (!cwd) return { ok: false, error: `Diretório não existe: ${requestedCwd}` }
+
+    const resume = request.resumeSessionId !== undefined
+    if (resume && !isSessionId(request.resumeSessionId)) return { ok: false, error: 'ID de sessão inválido' }
+    const sessionId = resume ? (request.resumeSessionId as string) : randomUUID()
+    const name = sanitizeName(isStr(request.name) ? request.name : undefined, cwd)
+    const args = buildClaudeArgs({ sessionId, resume, name, extra: extraClaudeArgs() })
 
     try {
-      const terminalId = ptys.create({ file, args: extraClaudeArgs(), cwd, cols: request.cols, rows: request.rows })
-      return { ok: true, terminalId, cwd }
+      const terminalId = ptys.create({ file, args, cwd, cols: request.cols, rows: request.rows })
+      return { ok: true, terminalId, sessionId, cwd, name }
     } catch (error) {
       return { ok: false, error: `Falha ao iniciar o claude: ${(error as Error).message}` }
     }
@@ -84,6 +90,22 @@ function registerIpc(): void {
   })
   ipcMain.on(IPC.terminalKill, (event, terminalId: unknown) => {
     if (fromMainWindow(event) && isStr(terminalId)) ptys.kill(terminalId)
+  })
+
+  ipcMain.handle(IPC.dialogPickDirectory, async (event, defaultPath: unknown) => {
+    if (!fromMainWindow(event) || !mainWindow) return null
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: 'Diretório do novo terminal',
+      defaultPath: resolveDirectory(isStr(defaultPath) ? defaultPath : undefined) ?? homedir(),
+      properties: ['openDirectory', 'createDirectory']
+    })
+    return result.canceled ? null : (result.filePaths[0] ?? null)
+  })
+
+  ipcMain.on(IPC.appConfirmClose, (event) => {
+    if (!fromMainWindow(event)) return
+    closeConfirmed = true
+    mainWindow?.close()
   })
 }
 
@@ -152,6 +174,13 @@ function createWindow(): BrowserWindow {
       })
     })
   }
+
+  // D-011: com terminais abertos, quem decide é o renderer (pede confirmação se algum estiver trabalhando).
+  win.on('close', (event) => {
+    if (closeConfirmed || ptys.size === 0) return
+    event.preventDefault()
+    win.webContents.send(IPC.appCloseRequested)
+  })
 
   win.on('closed', () => {
     mainWindow = null
