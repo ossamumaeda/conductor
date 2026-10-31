@@ -75,8 +75,18 @@ Confirmar as hipóteses de `fontes-de-dados.md` antes de construir em cima delas
 
 **Resultado:** `scripts/e2e/fase-5.cjs` (um prompt curto com Haiku; a permissão pedida é negada) passa os 11 checks: aguardando → executando → precisa de você → aguardando; uso real no rodapé (ex.: 69% / 43%); contexto "42k / 1M"; barra "contexto 4% (42k / 1M) · Haiku 5.5 · main". D-005 revisada: a status line é uma linha de shell, não um script Node.
 
-## Fase 6 — Polimento
-- [ ] Empacotar em AppImage/.deb e criar o atalho `.desktop` no menu
-- [ ] Ícone do app
+## Fase 6 — Polimento ✅
+- [x] Empacotar em AppImage (`npm run dist`) e criar o atalho `.desktop` no menu (`npm run install-desktop`)
+- [x] Ícone do app (`build/icon.png`, também na janela)
+- [x] Notificação + janela piscando quando um terminal fica "precisa de você" fora de foco (D-017)
+- [x] Título da janela com o terminal atual; bolinha da barra inferior cinza sem sessão
+- [x] Mesmo diretório de dados em dev e empacotado (`~/.config/conductor`)
 
 **Pronto quando:** o app substitui o uso diário da TUI pura.
+
+**Resultado:** AppImage de ~126 MB testado com ambiente mínimo (`PATH=/usr/bin:/bin`, como no menu do sistema): abre, acha o `claude` pelo fallback e lê histórico e uso. O `node-pty` empacotado (fora do asar) executou o `claude`. `.desktop` validado com `desktop-file-validate`. Regressão: fases 3 (12 checks), 4 (8) e 5 (11) passando. O `.deb` ficou de fora: o electron-builder exige `homepage`/repositório público e o AppImage já cobre o uso local.
+
+## Ideias para depois
+- Escolher o modelo ao criar um terminal (`--model`).
+- Contexto das sessões do histórico (fallback pelo `.jsonl`, ver fontes-de-dados.md).
+- `.deb` quando houver um repositório público.

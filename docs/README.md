@@ -21,9 +21,11 @@ npx electron --version   # na primeira vez: baixa o binário do Electron
 npm run dev              # desenvolvimento, com hot reload
 npm run typecheck        # checagem de tipos (main/preload e renderer)
 npm run build            # build de produção em out/
+npm run dist             # AppImage em dist/
+npm run install-desktop  # instala o AppImage e o atalho no menu (--uninstall para remover)
 ```
 
-Roteiros e2e (só em desenvolvimento): `CONDUCTOR_E2E=$PWD/scripts/e2e/fase-2.cjs CONDUCTOR_E2E_OUT=/tmp/e2e CONDUCTOR_CWD=~/Projects npx electron-vite preview --skipBuild`. O roteiro recebe a janela, digita no terminal e salva prints. `CONDUCTOR_CLAUDE_ARGS` passa argumentos extras ao `claude` (ex.: `--model haiku`).
+Roteiros e2e (só em desenvolvimento, depois de `npm run build`): `CONDUCTOR_E2E=$PWD/scripts/e2e/fase-3.cjs CONDUCTOR_E2E_OUT=/tmp/e2e npx electron-vite preview --skipBuild`. A fase 5 envia um prompt curto ao modelo: rode com `CONDUCTOR_CLAUDE_ARGS="--model haiku --permission-mode default" E2E_DIR=$PWD/spikes/fase-0/workdir`. O roteiro recebe a janela, digita no terminal e salva prints. `CONDUCTOR_CLAUDE_ARGS` passa argumentos extras ao `claude` (ex.: `--model haiku`).
 
 Para verificação visual automatizada: `CONDUCTOR_CAPTURE=/caminho/print.png npx electron-vite preview` salva um print da janela e fecha o app.
 

@@ -2,7 +2,7 @@
 // Uso:
 //   npm run build
 //   CONDUCTOR_E2E=$PWD/scripts/e2e/fase-2.cjs CONDUCTOR_E2E_OUT=/tmp/e2e \
-//   CONDUCTOR_CWD=$PWD npx electron-vite preview --skipBuild
+//   E2E_DIR=~/Projects npx electron-vite preview --skipBuild   (diretório já confiável)
 const { clipboard } = require('electron')
 const { writeFileSync, mkdirSync } = require('node:fs')
 const { join } = require('node:path')
@@ -34,7 +34,11 @@ module.exports = async function run({ app, win }) {
   })`)
 
   win.focus()
-  await sleep(7000)
+  await sleep(1500)
+  // Desde a fase 3 o app começa vazio (D-011): abre um terminal pelo diálogo.
+  await key('T', ['control', 'shift'])
+  await wc.executeJavaScript(`document.getElementById('new-cwd').value = ${JSON.stringify(process.env.E2E_DIR || '~/Projects')}; document.getElementById('new-submit').click()`)
+  await sleep(6000)
   console.log('[e2e] estado inicial', await domState())
   await shot('1-inicial')
 

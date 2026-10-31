@@ -26,7 +26,10 @@ export const IPC = {
   sessionUpdate: 'session:update',
   /** invoke / evento: uso do plano (5h e semanal). */
   usageGet: 'usage:get',
-  usageUpdate: 'usage:update'
+  usageUpdate: 'usage:update',
+  /** main → renderer: selecionar um terminal (clique na notificação, D-017). */
+  terminalFocus: 'terminal:focus',
+  terminalName: 'terminal:name'
 } as const
 
 export interface TerminalCreateRequest {
@@ -140,6 +143,9 @@ export interface ConductorApi {
     onUpdate(listener: (items: HistoryItem[]) => void): () => void
   }
   onSessionUpdate(listener: (update: SessionUpdate) => void): () => void
+  onFocusTerminal(listener: (terminalId: string) => void): () => void
+  /** Informa ao main o nome exibido de cada terminal (usado nas notificações). */
+  setTerminalName(terminalId: string, name: string): void
   usage: {
     get(): Promise<UsageSnapshot | null>
     onUpdate(listener: (usage: UsageSnapshot) => void): () => void

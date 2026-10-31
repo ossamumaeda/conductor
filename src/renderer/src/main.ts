@@ -67,12 +67,16 @@ api.onSessionUpdate((update) => {
   if (!tab) return
   const { terminalId: _id, ...changes } = update
   Object.assign(tab.summary, changes)
+  if (update.name !== undefined) api.setTerminalName(tab.summary.terminalId, update.name)
   if (update.cwd !== undefined) tab.summary.cwd = tildify(update.cwd)
   renderLists()
   if (tab.summary.terminalId === selectedId) showTerminalChrome(tab.summary)
 })
 
 api.usage.onUpdate((usage) => renderUsage(usage))
+
+// D-017: clique na notificação "precisa de você".
+api.onFocusTerminal((terminalId) => findTab(terminalId) && select(terminalId))
 
 api.terminal.onExit(({ terminalId, exitCode, signal }) => {
   earlyOutput.delete(terminalId)
@@ -115,6 +119,7 @@ async function openTerminal(request: Omit<TerminalCreateRequest, 'cols' | 'rows'
   earlyOutput.delete(terminalId)
 
   rememberDir(result.cwd)
+  api.setTerminalName(terminalId, result.name)
   tabs.push({
     session,
     summary: {
@@ -188,6 +193,7 @@ function render(): void {
   renderLists()
   const current = findTab(selectedId)
   for (const t of tabs) if (t !== current) t.session.hide()
+  document.title = current ? `${current.summary.name} — Conductor` : 'Conductor'
   if (current) {
     showTerminalChrome(current.summary)
     current.session.show()

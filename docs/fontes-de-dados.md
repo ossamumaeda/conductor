@@ -91,7 +91,7 @@ O comando da status line recebe o JSON pela entrada padrão a cada atualização
 ```
 
 - Tokens de contexto exibidos ("41k / 1M") = soma dos três campos `input`/`cache_*` de `current_usage`, sobre `context_window_size`.
-- `rate_limits.*` só aparece enquanto a API informa os limites. No plano **Pro** testado, vieram só `five_hour` e `seven_day`, sem os semanais por modelo. **Consequência para a D-006:** o terceiro card não tem dado nesse plano.
+- `rate_limits.*` só aparece enquanto a API informa os limites. No plano **Pro** testado, vieram só `five_hour` e `seven_day`, sem os semanais por modelo. Por isso o terceiro card do rodapé virou o resumo dos terminais (D-006).
 - Os limites são da conta, então o rodapé usa o payload **mais recente** entre todas as sessões.
 
 ## Payloads de hooks (capturados)

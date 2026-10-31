@@ -219,6 +219,11 @@ Status desconhecidos (ex.: `requires_action`) são tratados como "aguardando".
 
 ---
 
+## D-017 — Aviso de "precisa de você" fora de foco
+**Status:** Aceita · **Data:** 2026-10-31
+
+Quando um terminal passa para `waiting` e a janela não está em foco, o app pisca a janela na barra de tarefas (`flashFrame`) e mostra uma notificação do sistema com o nome do terminal. O clique traz a janela e seleciona o terminal. Uma notificação por transição (não repete enquanto continuar esperando). Com a janela em foco, só a bolinha muda.
+
 ## Em aberto
 
 Nenhuma questão em aberto no momento.

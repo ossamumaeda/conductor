@@ -33,6 +33,8 @@ const api: ConductorApi = {
     onUpdate: (listener) => subscribe<HistoryItem[]>(IPC.historyUpdate, listener)
   },
   onSessionUpdate: (listener) => subscribe<SessionUpdate>(IPC.sessionUpdate, listener),
+  onFocusTerminal: (listener) => subscribe<string>(IPC.terminalFocus, listener),
+  setTerminalName: (terminalId, name) => ipcRenderer.send(IPC.terminalName, terminalId, name),
   usage: {
     get: () => ipcRenderer.invoke(IPC.usageGet),
     onUpdate: (listener) => subscribe<UsageSnapshot>(IPC.usageUpdate, listener)

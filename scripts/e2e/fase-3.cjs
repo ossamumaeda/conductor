@@ -44,7 +44,9 @@ module.exports = async function run({ app, win }) {
   await shot('2-erro')
 
   // Terminal "e2e-alpha"
-  await key('A', ['control']); await type(dir); await key('Tab'); await key('Tab'); await type('e2e-alpha'); await key('Return')
+  // Campos via DOM: a ordem de Tab muda conforme existem chips de diretórios recentes.
+  await js(`document.getElementById('new-cwd').value = ${JSON.stringify(dir)}; document.getElementById('new-name').value = 'e2e-alpha'`)
+  await key('Return')
   await sleep(4000)
   let s = await state()
   check('abriu e2e-alpha', s.rows.includes('e2e-alpha') && s.dialog === null, s)
@@ -53,7 +55,9 @@ module.exports = async function run({ app, win }) {
   await key('T', ['control', 'shift'])
   await shot('3-dialogo-recentes')
   await js(`document.querySelector('#recent-dirs .chip').click()`)
-  await type('e2e-beta'); await key('Return')
+  check('chip preenche o diretório', (await js(`document.getElementById('new-cwd').value`)) === dir.replace(/\/$/, ''))
+  await js(`document.getElementById('new-name').value = 'e2e-beta'`)
+  await key('Return')
   await sleep(4000)
   s = await state()
   check('abriu e2e-beta e selecionou', s.rows.length === 2 && s.selected === 'e2e-beta', s)

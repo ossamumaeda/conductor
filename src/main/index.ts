@@ -6,8 +6,10 @@ import { createRequire } from 'node:module'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
+import icon from '../../build/icon.png?asset'
 import { IPC, type AppInfo, type TerminalCreateRequest, type TerminalCreateResult } from '../shared/ipc'
 import { resolveClaudeBinary } from './claude-bin'
+import { AttentionNotifier } from './attention'
 import { buildClaudeArgs, isSessionId, resolveDirectory, sanitizeName } from './claude-launch'
 import { PtyManager } from './pty-manager'
 import { SessionHub } from './session-hub'
@@ -15,6 +17,9 @@ import { statusLineSettings, StatusLineWatcher } from './statusline'
 
 const execFileAsync = promisify(execFile)
 const isDev = !app.isPackaged
+
+// Mesmo diretório de dados em desenvolvimento e empacotado (sem isso: ~/.config/conductor vs ~/.config/Conductor).
+app.setPath('userData', join(app.getPath('appData'), 'conductor'))
 
 let mainWindow: BrowserWindow | null = null
 /** Vira true quando o renderer confirma o fechamento com terminais abertos (D-011). */
@@ -31,6 +36,7 @@ const ptys = new PtyManager({
   exit: (event) => {
     send(IPC.terminalExit, event)
     hub.forgetTerminal(event.terminalId)
+    attention.forget(event.terminalId)
     void statusLines.forget(event.terminalId)
     // A sessão fechada volta para o histórico (com a atividade mais recente).
     void hub.refreshHistory()
@@ -41,10 +47,18 @@ const hub = new SessionHub(
   ptys,
   {
     history: (items) => send(IPC.historyUpdate, items),
-    session: (update) => send(IPC.sessionUpdate, update),
+    session: (update) => {
+      send(IPC.sessionUpdate, update)
+      attention.onSessionUpdate(update)
+    },
     usage: (usage) => send(IPC.usageUpdate, usage)
   },
   USAGE_FILE
+)
+
+const attention = new AttentionNotifier(
+  () => mainWindow,
+  (terminalId) => send(IPC.terminalFocus, terminalId)
 )
 
 const statusLines = new StatusLineWatcher(STATE_DIR, (update) => hub.onStatusLine(update))
@@ -125,6 +139,10 @@ function registerIpc(): void {
     if (fromMainWindow(event) && isStr(terminalId)) ptys.kill(terminalId)
   })
 
+  ipcMain.on(IPC.terminalName, (event, terminalId: unknown, name: unknown) => {
+    if (fromMainWindow(event) && isStr(terminalId) && isStr(name)) attention.setName(terminalId, name.slice(0, 80))
+  })
+
   ipcMain.handle(IPC.historyGet, (event) => (fromMainWindow(event) ? hub.history() : []))
   ipcMain.handle(IPC.usageGet, (event) => (fromMainWindow(event) ? hub.usageSnapshot() : null))
 
@@ -153,6 +171,7 @@ function createWindow(): BrowserWindow {
     minHeight: 600,
     title: 'Conductor',
     backgroundColor: '#0b0e12',
+    icon,
     show: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -163,6 +182,7 @@ function createWindow(): BrowserWindow {
   })
 
   win.once('ready-to-show', () => win.show())
+  win.on('focus', () => win.flashFrame(false))
 
   // Nada de novas janelas nem navegação para fora do app. Links http(s) abrem no navegador.
   win.webContents.setWindowOpenHandler(({ url }) => {

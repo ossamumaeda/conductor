@@ -9,12 +9,15 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
-    "postinstall": "electron-rebuild -f -w node-pty"
+    "postinstall": "electron-rebuild -f -w node-pty",
+    "dist": "electron-vite build && electron-builder --linux",
+    "install-desktop": "bash scripts/install-desktop.sh"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.2.1",
     "@types/node": "^22.20.5",
     "electron": "^45.2.1",
+    "electron-builder": "^26.18.0",
     "electron-vite": "^6.0.0",
     "typescript": "^7.0.2",
     "vite": "^8.3.5"
@@ -27,5 +30,41 @@
     "@xterm/addon-webgl": "^0.19.0",
     "@xterm/xterm": "^6.0.0",
     "node-pty": "^1.1.0"
-  }
+  },
+  "productName": "Conductor",
+  "author": "Gabriel Maeda",
+  "build": {
+    "appId": "local.conductor.app",
+    "productName": "Conductor",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "**/node_modules/node-pty/**"
+    ],
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Development",
+      "executableName": "conductor",
+      "icon": "build/icon.png",
+      "synopsis": "Interface desktop para orquestrar sessões do Claude Code",
+      "desktop": {
+        "entry": {
+          "StartupWMClass": "conductor",
+          "Name": "Conductor",
+          "Comment": "Sessões do Claude Code em uma interface gráfica"
+        }
+      },
+      "syncDesktopName": true
+    },
+    "npmRebuild": true
+  },
+  "desktopName": "conductor.desktop"
 }
