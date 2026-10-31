@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import { spawn, type IPty } from 'node-pty'
 import type { TerminalDataEvent, TerminalExitEvent } from '../shared/ipc'
 import { childEnv } from './claude-bin'
@@ -26,8 +25,8 @@ export class PtyManager {
 
   constructor(private readonly events: PtyEvents) {}
 
-  create(options: { sessionId: string; file: string; args: string[]; cwd: string; cols: number; rows: number }): string {
-    const terminalId = randomUUID()
+  create(options: { terminalId: string; sessionId: string; file: string; args: string[]; cwd: string; cols: number; rows: number }): string {
+    const { terminalId } = options
     const proc = spawn(options.file, options.args, {
       name: 'xterm-256color',
       cwd: options.cwd,
@@ -87,6 +86,14 @@ export class PtyManager {
   hasSession(sessionId: string): boolean {
     for (const entry of this.entries.values()) if (entry.sessionId === sessionId) return true
     return false
+  }
+
+  /** `/clear` troca o session_id dentro do mesmo processo; a status line avisa. */
+  setSession(terminalId: string, sessionId: string): boolean {
+    const entry = this.entries.get(terminalId)
+    if (!entry || entry.sessionId === sessionId) return false
+    entry.sessionId = sessionId
+    return true
   }
 
   /** terminalId → sessionId dos terminais abertos. */

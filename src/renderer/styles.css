@@ -65,12 +65,14 @@ td { padding: 12px 20px; border-top: 1px solid var(--line-soft); font-size: 12px
 /* Bolinha de status (D-012) */
 .status-dot { display: inline-block; width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--status-busy); box-shadow: 0 0 9px color-mix(in srgb, var(--status-busy) 35%, transparent); }
 .status-dot.idle { background: var(--status-idle); box-shadow: 0 0 8px color-mix(in srgb, var(--status-idle) 35%, transparent); }
+.status-dot.off { background: #46515d; box-shadow: none; }
 .status-dot.waiting { background: var(--status-waiting); animation: pulse 1.4s ease-in-out infinite; }
 @keyframes pulse {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--status-waiting) 60%, transparent); }
   50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--status-waiting) 0%, transparent); }
 }
-@media (prefers-reduced-motion: reduce) { .status-dot.waiting { animation: none; box-shadow: 0 0 9px color-mix(in srgb, var(--status-waiting) 55%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .status-dot.off { background: #46515d; box-shadow: none; }
+.status-dot.waiting { animation: none; box-shadow: 0 0 9px color-mix(in srgb, var(--status-waiting) 55%, transparent); } }
 
 .token-cell { min-width: 118px; }
 .token-meta { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 6px; color: #aeb7c2; font: 10px var(--mono); }

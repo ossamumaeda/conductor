@@ -21,7 +21,12 @@ export const IPC = {
   /** invoke: lista atual do histórico. */
   historyGet: 'history:get',
   /** main → renderer: histórico mudou (lista completa). */
-  historyUpdate: 'history:update'
+  historyUpdate: 'history:update',
+  /** main → renderer: status, contexto, modelo etc. de um terminal mudou (parcial). */
+  sessionUpdate: 'session:update',
+  /** invoke / evento: uso do plano (5h e semanal). */
+  usageGet: 'usage:get',
+  usageUpdate: 'usage:update'
 } as const
 
 export interface TerminalCreateRequest {
@@ -106,6 +111,18 @@ export interface UsageSnapshot {
   readAt: number
 }
 
+/** Atualização parcial de um terminal ativo: só os campos presentes mudaram. */
+export interface SessionUpdate {
+  terminalId: string
+  sessionId?: string
+  status?: SessionStatus
+  context?: ContextUsage | null
+  model?: string | null
+  branch?: string | null
+  name?: string
+  cwd?: string
+}
+
 /** API exposta pelo preload em `window.conductor`. */
 export interface ConductorApi {
   getAppInfo(): Promise<AppInfo>
@@ -121,6 +138,11 @@ export interface ConductorApi {
   history: {
     get(): Promise<HistoryItem[]>
     onUpdate(listener: (items: HistoryItem[]) => void): () => void
+  }
+  onSessionUpdate(listener: (update: SessionUpdate) => void): () => void
+  usage: {
+    get(): Promise<UsageSnapshot | null>
+    onUpdate(listener: (usage: UsageSnapshot) => void): () => void
   }
   pickDirectory(defaultPath?: string): Promise<string | null>
   onCloseRequested(listener: () => void): () => void

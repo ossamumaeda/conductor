@@ -65,13 +65,15 @@ Confirmar as hipóteses de `fontes-de-dados.md` antes de construir em cima delas
 
 **Resultado:** com os dados reais (24 sessões, 180 MB, arquivos de até 54 MB), a primeira varredura leva ~94 ms e as seguintes ~1 ms. Cada arquivo é lido só no início (256 KB, uma vez) e no fim (256 KB, quando muda). `scripts/e2e/fase-4.cjs` passa os 8 checks. Corrigido no caminho: fechar pelo app não é mais tratado como erro (o `claude` sai com código 129 no SIGHUP).
 
-## Fase 5 — Status, contexto e uso
-- [ ] `sessions.ts` com a bolinha executando / aguardando / precisa de você em tempo real (D-012)
-- [ ] `statusline.cjs` + `usage.ts` alimentando o rodapé (Sessão 5h e Semanal, com reset; terceiro card com o resumo dos terminais, D-006)
-- [ ] Barra de contexto por terminal e ordenação por uso
-- [ ] Barra inferior do painel (contexto · modelo · branch)
+## Fase 5 — Status, contexto e uso ✅
+- [x] Bolinha executando / aguardando / precisa de você em tempo real, via registro de sessões (D-012)
+- [x] Status line injetada + `statusline.ts` alimentando o rodapé (Sessão 5h e Semanal, com reset); terceiro card com o resumo dos terminais (D-006)
+- [x] Barra de contexto por terminal e ordenação por uso
+- [x] Barra inferior do painel (contexto · modelo · branch)
 
 **Pronto quando:** os números batem com o `/usage` e o `/context` da TUI.
+
+**Resultado:** `scripts/e2e/fase-5.cjs` (um prompt curto com Haiku; a permissão pedida é negada) passa os 11 checks: aguardando → executando → precisa de você → aguardando; uso real no rodapé (ex.: 69% / 43%); contexto "42k / 1M"; barra "contexto 4% (42k / 1M) · Haiku 5.5 · main". D-005 revisada: a status line é uma linha de shell, não um script Node.
 
 ## Fase 6 — Polimento
 - [ ] Empacotar em AppImage/.deb e criar o atalho `.desktop` no menu

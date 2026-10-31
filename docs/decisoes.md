@@ -66,20 +66,25 @@ Formato curto de ADR (Architecture Decision Record). Status possíveis:
 ---
 
 ## D-005 — Uso do plano e do contexto via status line injetada com `--settings`
-**Status:** Aceita · **Data:** 2026-10-31
+**Status:** Aceita · **Data:** 2026-10-31 · **Revisada na fase 5**
 
 **Contexto.** O único lugar onde o CLI expõe `rate_limits` (5h e semanal) e o contexto atual é o JSON que ele envia ao comando de status line.
 
-**Decisão.** Ao abrir cada terminal, o app passa `--settings '<json>'` com um `statusLine` que aponta para um script do próprio app. O script:
-1. lê o JSON da entrada padrão;
-2. grava o JSON em `~/.config/conductor/state/<session_id>.json` (escrita atômica);
-3. imprime uma linha curta, para que a status line continue aparecendo na TUI.
+**Decisão.** Ao abrir cada terminal, o app passa `--settings '<json>'` com um `statusLine` cujo comando é **uma linha de shell**, sem script:
 
-**Por quê.** Não altera o `~/.claude/settings.json` global e só vale para as sessões abertas pelo app.
+```sh
+cat > '<state>/<terminalId>.json.tmp' && mv -f '<state>/<terminalId>.json.tmp' '<state>/<terminalId>.json'
+```
+
+- `<state>` = `~/.config/conductor/state/`. O main observa a pasta e interpreta cada payload (`src/main/statusline.ts`).
+- O arquivo é **por terminal**, não por sessão, porque `/clear` troca o `session_id` dentro do mesmo processo. O payload traz o novo ID e o app atualiza o vínculo.
+- Nada é impresso, então a TUI fica igual à de sempre. Se o usuário tiver uma status line própria em `~/.claude/settings.json`, ela roda em seguida (`( cmd ) < arquivo`) e continua aparecendo.
+
+**Por que shell e não um script Node** (como previsto antes): no app empacotado o script ficaria dentro do `.asar`, que processos externos não leem, e o `node` pode não estar no PATH quando o app é aberto pelo menu do sistema.
 
 **Consequências.**
-- Os números só atualizam enquanto há sessão ativa. Com tudo fechado, o rodapé mostra o último valor e o horário em que foi lido.
-- Se o usuário configurar uma status line própria no futuro, o script do app precisa chamá-la em cadeia. Fica para depois.
+- Os números só atualizam enquanto há sessão ativa e depois de uma resposta da API. O último valor fica em `~/.config/conductor/usage.json` e é mostrado ao reabrir o app; leituras com mais de 10 min ganham "lido HH:MM", e janelas cujo `resets_at` já passou mostram "Renovado".
+- Os limites são da conta: vale o payload mais recente de qualquer terminal.
 
 ---
 

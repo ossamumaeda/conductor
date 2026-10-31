@@ -9,7 +9,6 @@ import '../styles.css'
 import type { HistoryItem, TerminalCreateRequest, TerminalSummary } from '../../shared/ipc'
 import { confirmDialog } from './dialogs'
 import { byId } from './dom'
-import { mockUsage } from './mock-data'
 import { openNewTerminalDialog, setupNewTerminalDialog } from './new-terminal-dialog'
 import { rememberDir } from './recent-dirs'
 import { installShortcuts } from './shortcuts'
@@ -26,7 +25,6 @@ interface Tab {
   session: XtermSession
 }
 
-// O uso do plano continua falso até a fase 5.
 const tabs: Tab[] = []
 let history: HistoryItem[] = []
 let historyQuery = ''
@@ -62,6 +60,19 @@ api.terminal.onData(({ terminalId, data }) => {
   if (tab) tab.session.write(data)
   else earlyOutput.set(terminalId, (earlyOutput.get(terminalId) ?? '') + data)
 })
+
+// Fase 5: status (registro), contexto/modelo/nome (status line) e branch (.jsonl).
+api.onSessionUpdate((update) => {
+  const tab = findTab(update.terminalId)
+  if (!tab) return
+  const { terminalId: _id, ...changes } = update
+  Object.assign(tab.summary, changes)
+  if (update.cwd !== undefined) tab.summary.cwd = tildify(update.cwd)
+  renderLists()
+  if (tab.summary.terminalId === selectedId) showTerminalChrome(tab.summary)
+})
+
+api.usage.onUpdate((usage) => renderUsage(usage))
 
 api.terminal.onExit(({ terminalId, exitCode, signal }) => {
   earlyOutput.delete(terminalId)
@@ -111,7 +122,7 @@ async function openTerminal(request: Omit<TerminalCreateRequest, 'cols' | 'rows'
       sessionId: result.sessionId,
       name: result.name,
       cwd: tildify(result.cwd),
-      status: 'idle', // fase 5: registro de sessões
+      status: 'idle', // até o registro de sessões responder
       context: null,
       model: null,
       branch: null
@@ -240,8 +251,9 @@ installShortcuts({
 })
 
 // ---------- Início (D-011: começa sem terminais) ----------
-renderUsage(mockUsage)
+renderUsage(null)
 render()
+void api.usage.get().then((usage) => usage && renderUsage(usage))
 
 void api.getAppInfo().then(async (info) => {
   homeDir = info.homeDir

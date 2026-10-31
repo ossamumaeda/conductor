@@ -13,8 +13,7 @@ flowchart LR
   M -- node-pty --> C2[claude #2]
   M -- lê --> S[~/.claude/sessions/*.json]
   M -- lê --> J[~/.claude/projects/*/*.jsonl]
-  C1 & C2 -- status line --> SL[statusline.cjs]
-  SL -- grava --> ST[~/.config/conductor/state/*.json]
+  C1 & C2 -- status line (cat > arquivo) --> ST[~/.config/conductor/state/*.json]
   M -- lê --> ST
   R <--> P <--> M
 ```
@@ -31,10 +30,9 @@ flowchart LR
 | `claude-data/history.ts` | Varre `~/.claude/projects/` e monta a lista do histórico (título, cwd, data, branch) |
 | `claude-data/registry.ts` | Lê e observa `~/.claude/sessions/` (só processos vivos) |
 | `session-hub.ts` | Junta histórico, registro e terminais do app; publica histórico e status para o renderer |
-| `usage.ts` | Observa `~/.config/conductor/state/` e consolida os limites 5h e semanal |
+| `statusline.ts` | Monta o comando da status line (D-005), observa `~/.config/conductor/state/` e interpreta os payloads |
 | `claude-bin.ts` | Localiza o binário `claude` e monta o ambiente do processo filho (D-015) |
 | `claude-launch.ts` | Valida diretório e nome e monta os argumentos do `claude` (`--session-id`, `--name`, `--resume`) |
-| `resources/statusline.cjs` | Script **executado pelo `claude`**, não pelo app (D-005) |
 
 ### Preload (`src/preload/index.ts`)
 Expõe uma API mínima em `window.conductor`. O renderer não acessa Node diretamente.
@@ -85,15 +83,13 @@ terminal-orchestrator/
 ├── package.json
 ├── electron.vite.config.ts
 ├── tsconfig.json
-├── resources/
-│   └── statusline.cjs      # executado pelo `claude` (D-005)
 └── src/
     ├── shared/
     │   └── ipc.ts          # tipos do contrato IPC
     ├── main/
     │   ├── index.ts
     │   ├── pty-manager.ts
-    │   ├── usage.ts
+    │   ├── statusline.ts
     │   ├── claude-bin.ts
     │   ├── claude-launch.ts
     │   └── claude-data/
@@ -122,8 +118,6 @@ terminal-orchestrator/
             ├── mock-data.ts     # dados falsos (some até a fase 5)
             └── env.d.ts         # tipo de window.conductor
 ```
-
-O script em `resources/` é JavaScript puro (`.cjs`), porque roda como processo independente chamado pelo `claude`, fora do Electron. Precisa iniciar rápido e não pode depender do build.
 
 ## Desempenho
 

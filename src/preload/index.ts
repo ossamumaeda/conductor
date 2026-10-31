@@ -1,5 +1,13 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import { IPC, type ConductorApi, type HistoryItem, type TerminalDataEvent, type TerminalExitEvent } from '../shared/ipc'
+import {
+  IPC,
+  type ConductorApi,
+  type HistoryItem,
+  type SessionUpdate,
+  type TerminalDataEvent,
+  type TerminalExitEvent,
+  type UsageSnapshot
+} from '../shared/ipc'
 
 // Única ponte entre o renderer e o sistema. Expor apenas funções específicas,
 // nunca o ipcRenderer inteiro (D-008).
@@ -23,6 +31,11 @@ const api: ConductorApi = {
   history: {
     get: () => ipcRenderer.invoke(IPC.historyGet),
     onUpdate: (listener) => subscribe<HistoryItem[]>(IPC.historyUpdate, listener)
+  },
+  onSessionUpdate: (listener) => subscribe<SessionUpdate>(IPC.sessionUpdate, listener),
+  usage: {
+    get: () => ipcRenderer.invoke(IPC.usageGet),
+    onUpdate: (listener) => subscribe<UsageSnapshot>(IPC.usageUpdate, listener)
   },
   pickDirectory: (defaultPath) => ipcRenderer.invoke(IPC.dialogPickDirectory, defaultPath),
   onCloseRequested: (listener) => subscribe<void>(IPC.appCloseRequested, listener),

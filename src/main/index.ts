@@ -11,6 +11,7 @@ import { resolveClaudeBinary } from './claude-bin'
 import { buildClaudeArgs, isSessionId, resolveDirectory, sanitizeName } from './claude-launch'
 import { PtyManager } from './pty-manager'
 import { SessionHub } from './session-hub'
+import { statusLineSettings, StatusLineWatcher } from './statusline'
 
 const execFileAsync = promisify(execFile)
 const isDev = !app.isPackaged
@@ -19,18 +20,34 @@ let mainWindow: BrowserWindow | null = null
 /** Vira true quando o renderer confirma o fechamento com terminais abertos (D-011). */
 let closeConfirmed = false
 
+/** Estado próprio do app (D-004): ~/.config/conductor. */
+const STATE_DIR = join(app.getPath('userData'), 'state')
+const USAGE_FILE = join(app.getPath('userData'), 'usage.json')
+
+const send = (channel: string, payload: unknown): void => mainWindow?.webContents.send(channel, payload)
+
 const ptys = new PtyManager({
-  data: (event) => mainWindow?.webContents.send(IPC.terminalData, event),
+  data: (event) => send(IPC.terminalData, event),
   exit: (event) => {
-    mainWindow?.webContents.send(IPC.terminalExit, event)
+    send(IPC.terminalExit, event)
+    hub.forgetTerminal(event.terminalId)
+    void statusLines.forget(event.terminalId)
     // A sessão fechada volta para o histórico (com a atividade mais recente).
     void hub.refreshHistory()
   }
 })
 
-const hub = new SessionHub(ptys, {
-  history: (items) => mainWindow?.webContents.send(IPC.historyUpdate, items)
-})
+const hub = new SessionHub(
+  ptys,
+  {
+    history: (items) => send(IPC.historyUpdate, items),
+    session: (update) => send(IPC.sessionUpdate, update),
+    usage: (usage) => send(IPC.usageUpdate, usage)
+  },
+  USAGE_FILE
+)
+
+const statusLines = new StatusLineWatcher(STATE_DIR, (update) => hub.onStatusLine(update))
 
 async function readClaudeVersion(): Promise<string | null> {
   const bin = resolveClaudeBinary()
@@ -65,7 +82,7 @@ function registerIpc(): void {
     homeDir: homedir()
   }))
 
-  ipcMain.handle(IPC.terminalCreate, (event, request: TerminalCreateRequest): TerminalCreateResult => {
+  ipcMain.handle(IPC.terminalCreate, async (event, request: TerminalCreateRequest): Promise<TerminalCreateResult> => {
     if (!fromMainWindow(event)) return { ok: false, error: 'Origem não autorizada' }
     if (!isInt(request?.cols) || !isInt(request?.rows)) return { ok: false, error: 'Tamanho inválido' }
 
@@ -85,10 +102,12 @@ function registerIpc(): void {
     }
     const sessionId = resume ? (request.resumeSessionId as string) : randomUUID()
     const name = sanitizeName(isStr(request.name) ? request.name : undefined, cwd)
-    const args = buildClaudeArgs({ sessionId, resume, name, extra: extraClaudeArgs() })
+    const terminalId = randomUUID()
+    const settings = await statusLineSettings(STATE_DIR, terminalId)
+    const args = buildClaudeArgs({ sessionId, resume, name, settings, extra: extraClaudeArgs() })
 
     try {
-      const terminalId = ptys.create({ sessionId, file, args, cwd, cols: request.cols, rows: request.rows })
+      ptys.create({ terminalId, sessionId, file, args, cwd, cols: request.cols, rows: request.rows })
       hub.publishHistory() // uma sessão retomada sai do histórico
       return { ok: true, terminalId, sessionId, cwd, name }
     } catch (error) {
@@ -107,6 +126,7 @@ function registerIpc(): void {
   })
 
   ipcMain.handle(IPC.historyGet, (event) => (fromMainWindow(event) ? hub.history() : []))
+  ipcMain.handle(IPC.usageGet, (event) => (fromMainWindow(event) ? hub.usageSnapshot() : null))
 
   ipcMain.handle(IPC.dialogPickDirectory, async (event, defaultPath: unknown) => {
     if (!fromMainWindow(event) || !mainWindow) return null
@@ -215,11 +235,12 @@ app.whenReady().then(() => {
   session.defaultSession.setPermissionCheckHandler((_wc, permission) => ALLOWED_PERMISSIONS.has(permission))
   registerIpc()
   mainWindow = createWindow()
-  hub.start()
+  void statusLines.start().then(() => hub.start())
 })
 
 app.on('before-quit', () => {
   hub.stop()
+  statusLines.stop()
   ptys.killAll()
 })
 app.on('window-all-closed', () => app.quit())

@@ -10,6 +10,7 @@ const live = byId('terminal-live')
 const path = byId('terminal-path')
 const empty = byId('terminal-empty')
 const sessionState = byId('session-state')
+const sessionDot = byId('session-dot')
 const tokenStatus = byId('token-status')
 
 export const terminalHosts = byId('terminal-hosts')
@@ -28,7 +29,8 @@ export function showTerminalChrome(t: TerminalSummary): void {
   live.hidden = false
   live.className = `live ${statusClass(t.status)}`
   live.replaceChildren(el('i', { class: `status-dot ${statusClass(t.status)}` }), STATUS_LABEL[t.status])
-  sessionState.textContent = 'sessão em execução'
+  sessionState.textContent = `sessão ${STATUS_LABEL[t.status]}`
+  sessionDot.className = `status-dot ${statusClass(t.status)}`
 
   const ctx = t.context
     ? `contexto ${contextPercent(t)}% (${formatTokens(t.context.usedTokens)} / ${formatTokens(t.context.windowSize)})`
@@ -49,6 +51,7 @@ export function showEmpty(message?: { title: string; detail: string; error?: boo
   path.textContent = ''
   live.hidden = true
   sessionState.textContent = 'nenhuma sessão'
+  sessionDot.className = 'status-dot off'
   tokenStatus.textContent = ''
   empty.hidden = false
   empty.className = `empty-terminal ${message?.error ? 'error' : ''}`

@@ -38,10 +38,11 @@ export function buildClaudeArgs(options: {
   sessionId: string
   resume: boolean
   name: string
+  settings: Record<string, unknown>
   extra: string[]
 }): string[] {
   const args = options.resume
     ? ['--resume', options.sessionId]
     : ['--session-id', options.sessionId, '--name', options.name]
-  return [...args, ...options.extra]
+  return [...args, '--settings', JSON.stringify(options.settings), ...options.extra]
 }
